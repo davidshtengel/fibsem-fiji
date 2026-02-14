@@ -1,0 +1,13 @@
+*.class
+*.war
+*.ear
+target/
+build/
+.gradle/
+bin/
+.settings/
+.project
+.classpath
+*.iml
+.idea/
+nout/
