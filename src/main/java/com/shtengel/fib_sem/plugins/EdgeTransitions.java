@@ -19,6 +19,7 @@ import com.shtengel.fib_sem.data.EdgeTransitionData;
 import com.shtengel.fib_sem.util.EllipseFitter;
 import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
+import com.shtengel.fib_sem.util.ParamPersister;
 
 @Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Resolution; Edge Transitions")
 public class EdgeTransitions implements Command {
@@ -28,17 +29,17 @@ public class EdgeTransitions implements Command {
 	private double pixelSize = 1.0;
 	private int subsetSize = 25;
 	private double sectionLength = 25.0;
+    private int minMaxAperture = 5;
 	private float transitionLowLimit = 0.0f;
 	private float transitionHighLimit = 10.0f;
 	private int neighborExclusionRadius = 10;
-	private float thrMinCriterion = 0.15f;
-    private float thrMaxCriterion = 0.15f;
-    private int minMaxAperture = 5;
     private boolean excludeCenter = false;
     private double centerExclusionRadius = 20;
+	private float thrMinCriterion = 0.15f;
+    private float thrMaxCriterion = 0.15f;
     private float gradientThreshold = 0.005f;
-    private ImagePlus imp;
     private boolean saveFigs = false;
+    private ImagePlus imp;
     	
 	@Override
 	public void run() {
@@ -138,41 +139,9 @@ public class EdgeTransitions implements Command {
         IJ.showStatus("Edge transition analysis complete.");
 	}
 
-	/**
-	 * Extracts pixel size from image info for .dat files
-	 */
-	private double getPixelSize(ImagePlus imp) {
-		String info = imp.getInfoProperty();
-		if (info == null || info.isEmpty()) {		
-			return -1.0;
-		}
-		
-		// Look for pattern ""Pixel Size: X.XX nm"
-		String[] lines = info.split("\n");
-		for (String line : lines) {
-			line = line.trim();
-			
-			if (line.startsWith("Pixel Size:")) {
-	            try {
-	                String valueStr = line.substring("Pixel Size:".length()).trim();
-	                
-	                if (valueStr.endsWith(" nm")) {
-	                    valueStr = valueStr.substring(0, valueStr.length() - 3).trim();
-	                }
-	                double value = Double.parseDouble(valueStr);
-	                
-	                if (value > 0 && value < 1000) { // Sanity check
-	                    return value;
-	                }
-	            } catch (NumberFormatException | IndexOutOfBoundsException e) {
-	                IJ.log("Warning: Found 'Pixel Size:' line but could not parse value: " + line);
-	            }
-	        }
-		}
-		return -1.0;
-	}
-
 	private boolean showDialog() {
+		getAllPersistedParams();
+
 		GenericDialog gd = new GenericDialog("Edge Transition Analysis");
 
 		gd.addMessage("Transition bounds:");
@@ -241,30 +210,12 @@ public class EdgeTransitions implements Command {
 			IJ.error("Invalid gradient threshold. Must be between 0 and 1.");
             return false;
 		}
+
+		setAllPersistedParams();
 		
 		return true;
 	}
 	
-	private boolean validateBounds(double lower, double upper) {
-		if (lower < 0 || lower > 1 || upper < 0 || upper > 1) {
-	        IJ.error("Invalid bound values. Must be between 0 and 1.");
-	        return false;
-	    }
-	    if (lower >= upper) {
-	        IJ.error("Lower bound must be less than upper bound.");
-	        return false;
-	    }
-	    return true;
-	}
-	
-	private boolean validateThresholds(float thrMin, float thrMax) {
-	    if (thrMin < 0 || thrMin > 0.5 || thrMax < 0 || thrMax > 0.5) {
-	        IJ.error("Invalid threshold values. Must be between 0 and 0.5.");
-	        return false;
-	    }
-	    return true;
-	}
-
 	public void logResults(ImagePlus imp, EdgeTransitionData result) {
 	    IJ.log("=== Edge Transition Analysis Results ===");
 	    IJ.log("Image: " + imp.getTitle());
@@ -570,15 +521,124 @@ public class EdgeTransitions implements Command {
 		return plot;
 	}
 
+	// Helper Functions
+
+	/** Extracts pixel size from image info for .dat files */
+	private double getPixelSize(ImagePlus imp) {
+		String info = imp.getInfoProperty();
+		if (info == null || info.isEmpty()) {		
+			return -1.0;
+		}
+		
+		// Look for pattern ""Pixel Size: X.XX nm"
+		String[] lines = info.split("\n");
+		for (String line : lines) {
+			line = line.trim();
+			
+			if (line.startsWith("Pixel Size:")) {
+	            try {
+	                String valueStr = line.substring("Pixel Size:".length()).trim();
+	                
+	                if (valueStr.endsWith(" nm")) {
+	                    valueStr = valueStr.substring(0, valueStr.length() - 3).trim();
+	                }
+	                double value = Double.parseDouble(valueStr);
+	                
+	                if (value > 0 && value < 1000) { // Sanity check
+	                    return value;
+	                }
+	            } catch (NumberFormatException | IndexOutOfBoundsException e) {
+	                IJ.log("Warning: Found 'Pixel Size:' line but could not parse value: " + line);
+	            }
+	        }
+		}
+		return -1.0;
+	}
+
+	private void getAllPersistedParams() {
+		lowerBound = ParamPersister.get(imp, "lowerBound", 0.37);
+		upperBound = ParamPersister.get(imp, "upperBound", 0.63);
+		pixelSize = ParamPersister.get(imp, "pixelSize", pixelSize);
+        subsetSize = ParamPersister.get(imp, "subsetSize", 25);
+		sectionLength = ParamPersister.get(imp, "sectionLength", 25.0);
+		minMaxAperture = ParamPersister.get(imp, "minMaxAperture", 5);
+        transitionLowLimit = ParamPersister.get(imp, "transitionLowLimit", 0.0f);
+        transitionHighLimit = ParamPersister.get(imp, "transitionHighLimit", 10.0f);
+        neighborExclusionRadius = ParamPersister.get(imp, "neighborExclusionRadius", 20);
+        excludeCenter = ParamPersister.get(imp, "excludeCenter", false);
+        centerExclusionRadius = ParamPersister.get(imp, "centerExclusionRadius", 10);
+		thrMinCriterion = ParamPersister.get(imp, "thrMinCriterion", 0.15f);
+        thrMaxCriterion = ParamPersister.get(imp, "thrMaxCriterion", 0.15f);
+        gradientThreshold = ParamPersister.get(imp, "gradientThreshold", 0.005f);
+        saveFigs = ParamPersister.get(imp, "saveFigs", false);
+	}
+
+	private void setAllPersistedParams() {
+		ParamPersister.set(imp, "lowerBound", lowerBound);
+		ParamPersister.set(imp, "upperBound", upperBound);
+		ParamPersister.set(imp, "pixelSize", pixelSize);
+        ParamPersister.set(imp, "subsetSize", subsetSize);
+		ParamPersister.set(imp, "sectionLength", sectionLength);
+		ParamPersister.set(imp, "minMaxAperture", minMaxAperture);
+        ParamPersister.set(imp, "transitionLowLimit", transitionLowLimit);
+        ParamPersister.set(imp, "transitionHighLimit", transitionHighLimit);
+        ParamPersister.set(imp, "neighborExclusionRadius", neighborExclusionRadius);
+        ParamPersister.set(imp, "excludeCenter", excludeCenter);
+        ParamPersister.set(imp, "centerExclusionRadius", centerExclusionRadius);
+		ParamPersister.set(imp, "thrMinCriterion", thrMinCriterion);
+        ParamPersister.set(imp, "thrMaxCriterion", thrMaxCriterion);
+        ParamPersister.set(imp, "gradientThreshold", gradientThreshold);
+        ParamPersister.set(imp, "saveFigs", saveFigs);
+		logParams();
+	}
+
+	private void logParams() {
+    IJ.log("--- Parameters - Edge Transitions ---");
+    IJ.log("Lower bound: " + lowerBound);
+    IJ.log("Upper bound: " + upperBound);
+    IJ.log("Pixel size: " + pixelSize + " nm");
+    IJ.log("Subset size: " + subsetSize + " px");
+    IJ.log("Section length: " + sectionLength + " px");
+    IJ.log("Min/max aperture: " + minMaxAperture + " px");
+    IJ.log("Transition low limit: " + transitionLowLimit + " px");
+    IJ.log("Transition high limit: " + transitionHighLimit + " px");
+    IJ.log("Neighbor exclusion radius: " + neighborExclusionRadius + " px");
+    IJ.log("Exclude center: " + excludeCenter);
+    IJ.log("Center exclusion radius: " + centerExclusionRadius + " px");
+    IJ.log("Min threshold criterion: " + thrMinCriterion);
+    IJ.log("Max threshold criterion: " + thrMaxCriterion);
+    IJ.log("Gradient threshold: " + gradientThreshold);
+    IJ.log("Save figures: " + saveFigs);
+    IJ.log("-------------------------------------");
+}
+
+	private boolean validateBounds(double lower, double upper) {
+		if (lower < 0 || lower > 1 || upper < 0 || upper > 1) {
+	        IJ.error("Invalid bound values. Must be between 0 and 1.");
+	        return false;
+	    }
+	    if (lower >= upper) {
+	        IJ.error("Lower bound must be less than upper bound.");
+	        return false;
+	    }
+	    return true;
+	}
+	
+	private boolean validateThresholds(float thrMin, float thrMax) {
+	    if (thrMin < 0 || thrMin > 0.5 || thrMax < 0 || thrMax > 0.5) {
+	        IJ.error("Invalid threshold values. Must be between 0 and 0.5.");
+	        return false;
+	    }
+	    return true;
+	}
+
 	private Color getTransitionColor(double transitionValue, EdgeTransitionData result) {
 	    double range = result.getMaxTransition() - result.getMinTransition();
 	    double normalized = (transitionValue - result.getMinTransition()) / range;
 	    return getColor(normalized);
 	}
 	
-	/**
-	 * Generate a rainbow color (similar to matplotlib's gist_rainbow_r colormap)
-	 */
+	/** Generate a rainbow color (similar to matplotlib's gist_rainbow_r colormap) */
 	private Color getColor(double t) {
 		float hue = (float)(0.8 - t * 0.8);
 		if (hue < 0) hue += 1.0f;

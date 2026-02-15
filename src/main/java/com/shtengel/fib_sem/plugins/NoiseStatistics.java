@@ -7,6 +7,7 @@ import com.shtengel.fib_sem.core.NoiseStatisticsAnalyzer;
 import com.shtengel.fib_sem.data.NoiseStatisticsData;
 import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
+import com.shtengel.fib_sem.util.ParamPersister;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -150,6 +151,8 @@ public class NoiseStatistics implements Command {
     }
     
     private boolean showDialog() {
+		getAllPersistedParams();
+		
     	GenericDialog gd = new GenericDialog("Noise Statistics (Single Image)");
     	
     	gd.addMessage("These parameters are set to exclude the pixels with highest and lowest intensities\nfrom the analysis. Set the thresholds to 0.0 to include all pixels.");
@@ -202,6 +205,8 @@ public class NoiseStatistics implements Command {
             return false;
 		}
 
+		IJ.log("DEBUG: passed validation, about to save params");
+		setAllPersistedParams();
         
         return true;
     }
@@ -415,4 +420,43 @@ public class NoiseStatistics implements Command {
         
         return plot;
     }
+
+	private void getAllPersistedParams() {
+		thrMinAnalysis = ParamPersister.get(imp, "thrMinAnalysis", 0.01);
+		thrMaxAnalysis = ParamPersister.get(imp, "thrMaxAnalysis", 0.01);
+		nbinsAnalysis = ParamPersister.get(imp, "nbinsAnalysis", 256);
+        gradientThreshold = ParamPersister.get(imp, "gradientThreshold", 0.25);
+		displaySNR = ParamPersister.get(imp, "displaySNR", true);
+		darkCount = ParamPersister.get(imp, "darkCount", 0.0);
+        displaySNR1 = ParamPersister.get(imp, "displaySNR1", false);
+        showMaskVisualization = ParamPersister.get(imp, "showMaskVisualization", true);
+        saveFigs = ParamPersister.get(imp, "saveFigs", false);
+	}
+
+	private void setAllPersistedParams() {
+		ParamPersister.set(imp, "thrMinAnalysis", thrMinAnalysis);
+		ParamPersister.set(imp, "thrMaxAnalysis", thrMaxAnalysis);
+		ParamPersister.set(imp, "nbinsAnalysis", nbinsAnalysis);
+        ParamPersister.set(imp, "gradientThreshold", gradientThreshold);
+		ParamPersister.set(imp, "displaySNR", displaySNR);
+		ParamPersister.set(imp, "darkCount", darkCount);
+        ParamPersister.set(imp, "displaySNR1", displaySNR1);
+        ParamPersister.set(imp, "showMaskVisualization", showMaskVisualization);
+        ParamPersister.set(imp, "saveFigs", saveFigs);
+		logParams();
+	}
+
+	private void logParams() {
+		IJ.log("--- Parameters - Noise Statistics ---");
+		IJ.log("Analysis CDF threshold (lower): " + thrMinAnalysis);
+		IJ.log("Analysis CDF threshold (upper): " + thrMaxAnalysis);
+		IJ.log("Number of bins (analysis): " + nbinsAnalysis);
+		IJ.log("Gradient threshold: " + gradientThreshold);
+		IJ.log("Display SNR0: " + displaySNR);
+		IJ.log("Dark count: " + darkCount);
+		IJ.log("Display SNR1: " + displaySNR1);
+		IJ.log("Show mask visualization: " + showMaskVisualization);
+		IJ.log("Save figures: " + saveFigs);
+		IJ.log("-------------------------------------");
+	}
 }
