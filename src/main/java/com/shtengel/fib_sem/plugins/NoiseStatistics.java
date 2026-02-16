@@ -138,7 +138,7 @@ public class NoiseStatistics implements Command {
         	FigBuilder.createAndSave(noiseDist, "Noise Distribution", dir + baseName + "noise_distribution.png");
         	
         	if (mask != null) {        		
-        		FigBuilder.createAndSave(mask, "Pixel Exclusion Mask", dir + baseName + "exclusion_mask.png");
+        		FigBuilder.createAndSave(mask, "Pixel Exclusion Mask", dir + baseName + "_exclusion_mask.png");
         	}
         }
         
