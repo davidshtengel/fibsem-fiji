@@ -30,7 +30,7 @@ public class EdgeTransitions implements Command {
 	private int subsetSize = 25;
 	private double sectionLength = 25.0;
     private int minMaxAperture = 5;
-	private float transitionLowLimit = 0.0f;
+	private float transitionLowLimit = 0.5f;
 	private float transitionHighLimit = 10.0f;
 	private int neighborExclusionRadius = 10;
     private boolean excludeCenter = false;
@@ -166,7 +166,7 @@ public class EdgeTransitions implements Command {
 	    gd.addMessage("Threshold parameters:");
 	    gd.addNumericField("Minimum threshold criterion", thrMinCriterion, 2, 6, "");
 	    gd.addNumericField("Maximum threshold criterion", thrMaxCriterion, 2, 6, "");
-	    gd.addNumericField("Gradient threshold (CDF)", gradientThreshold, 4, 6, "");
+	    gd.addNumericField("Gradient threshold", gradientThreshold, 4, 6, ""); // Might need to add clarifying comment
 
 	    gd.addMessage("Export:");
 	    gd.addCheckbox("Save image/plot as titled figures", saveFigs);
