@@ -14,7 +14,7 @@
 
 	<groupId>com.shtengel</groupId>
 	<artifactId>fib_sem</artifactId>
-	<version>1.1.0</version>
+	<version>1.1.1</version>
 
 	<name>FIB-SEM Toolkit</name>
 	<description>Custom FIB-SEM image analysis tools for ImageJ/Fiji</description>
