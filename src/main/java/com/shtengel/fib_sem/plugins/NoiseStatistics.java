@@ -422,27 +422,27 @@ public class NoiseStatistics implements Command {
     }
 
 	private void getAllPersistedParams() {
-		thrMinAnalysis = ParamPersister.get(imp, "thrMinAnalysis", 0.01);
-		thrMaxAnalysis = ParamPersister.get(imp, "thrMaxAnalysis", 0.01);
-		nbinsAnalysis = ParamPersister.get(imp, "nbinsAnalysis", 256);
-        gradientThreshold = ParamPersister.get(imp, "gradientThreshold", 0.25);
-		displaySNR = ParamPersister.get(imp, "displaySNR", true);
-		darkCount = ParamPersister.get(imp, "darkCount", 0.0);
-        displaySNR1 = ParamPersister.get(imp, "displaySNR1", false);
-        showMaskVisualization = ParamPersister.get(imp, "showMaskVisualization", true);
-        saveFigs = ParamPersister.get(imp, "saveFigs", false);
+		thrMinAnalysis = ParamPersister.get(imp, "N_thrMinAnalysis", 0.01);
+		thrMaxAnalysis = ParamPersister.get(imp, "N_thrMaxAnalysis", 0.01);
+		nbinsAnalysis = ParamPersister.get(imp, "N_nbinsAnalysis", 256);
+        gradientThreshold = ParamPersister.get(imp, "N_gradientThreshold", 0.25);
+		displaySNR = ParamPersister.get(imp, "N_displaySNR", true);
+		darkCount = ParamPersister.get(imp, "N_darkCount", 0.0);
+        displaySNR1 = ParamPersister.get(imp, "N_displaySNR1", false);
+        showMaskVisualization = ParamPersister.get(imp, "N_showMaskVisualization", true);
+        saveFigs = ParamPersister.get(imp, "N_saveFigs", false);
 	}
 
 	private void setAllPersistedParams() {
-		ParamPersister.set(imp, "thrMinAnalysis", thrMinAnalysis);
-		ParamPersister.set(imp, "thrMaxAnalysis", thrMaxAnalysis);
-		ParamPersister.set(imp, "nbinsAnalysis", nbinsAnalysis);
-        ParamPersister.set(imp, "gradientThreshold", gradientThreshold);
-		ParamPersister.set(imp, "displaySNR", displaySNR);
-		ParamPersister.set(imp, "darkCount", darkCount);
-        ParamPersister.set(imp, "displaySNR1", displaySNR1);
-        ParamPersister.set(imp, "showMaskVisualization", showMaskVisualization);
-        ParamPersister.set(imp, "saveFigs", saveFigs);
+		ParamPersister.set(imp, "N_thrMinAnalysis", thrMinAnalysis);
+		ParamPersister.set(imp, "N_thrMaxAnalysis", thrMaxAnalysis);
+		ParamPersister.set(imp, "N_nbinsAnalysis", nbinsAnalysis);
+        ParamPersister.set(imp, "N_gradientThreshold", gradientThreshold);
+		ParamPersister.set(imp, "N_displaySNR", displaySNR);
+		ParamPersister.set(imp, "N_darkCount", darkCount);
+        ParamPersister.set(imp, "N_displaySNR1", displaySNR1);
+        ParamPersister.set(imp, "N_showMaskVisualization", showMaskVisualization);
+        ParamPersister.set(imp, "N_saveFigs", saveFigs);
 		logParams();
 	}
 
