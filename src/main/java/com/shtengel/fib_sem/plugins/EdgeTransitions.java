@@ -348,23 +348,24 @@ public class EdgeTransitions implements Command {
         );
         Plot plot = new Plot(plotTitle, "Transition Distance (pixels)", "Count");
         
-        // Add histogram
-        plot.setColor(Color.BLUE);
-        plot.addPoints(binCenters, histDouble, Plot.BAR);
-                
-        // Add mean line
+		// Add mean line
         plot.setColor(Color.RED);
         plot.drawLine(result.getMeanTransition(), 0, result.getMeanTransition(), Arrays.stream(histDouble).max().getAsDouble());
         
+        // Add histogram
+        plot.setLineWidth(1.5f);
+		plot.setColor(Color.BLUE);
+        plot.addPoints(binCenters, histDouble, Plot.BAR);        
+        
         // Add statistics labels
         plot.setColor(Color.BLACK);
-        plot.addLabel(0.75, 0.15, String.format("N = %d", transitions.length));
-        plot.addLabel(0.75, 0.20, String.format("Mean = %.3f px", result.getMeanTransition()));
-        plot.addLabel(0.75, 0.25, String.format("Std = %.3f px", result.getStdTransition()));
-        plot.addLabel(0.75, 0.30, String.format("Pixel size = %.3f nm", pixelSize));
-        plot.addLabel(0.75, 0.35, String.format("Mean = %.3f nm", result.getMeanTransition() * pixelSize));
-        plot.addLabel(0.75, 0.40, String.format("Std = %.3f nm", result.getStdTransition() * pixelSize));
-        
+        plot.addLabel(0.025, 0.05, String.format("N = %d", transitions.length));
+        plot.addLabel(0.025, 0.075, String.format("Mean = %.3f px", result.getMeanTransition()));
+        plot.addLabel(0.025, 0.1, String.format("Std = %.3f px", result.getStdTransition()));
+        plot.addLabel(0.025, 0.125, String.format("Pixel size = %.3f nm", pixelSize));
+        plot.addLabel(0.025, 0.15, String.format("Mean = %.3f nm", result.getMeanTransition() * pixelSize));
+        plot.addLabel(0.025, 0.175, String.format("Std = %.3f nm", result.getStdTransition() * pixelSize));
+        plot.setFrameSize(800,800);
         return plot;
 	}
 	
