@@ -285,7 +285,7 @@ public class EllipseFitter {
 	 */
 	private static double normalizePhi(double phi) {
 		while (phi > Math.PI) phi -= 2 * Math.PI;
-		while (phi < Math.PI) phi += 2 * Math.PI;
+		while (phi < -Math.PI) phi += 2 * Math.PI;
 		return phi;
 	}
 	
