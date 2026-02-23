@@ -363,9 +363,9 @@ public class NoiseStatistics implements Command {
         StringBuilder legend = new StringBuilder();
         
         // Plot data points
-        plot.setColor(new Color(170, 0, 255));
+        plot.setColor("BLUE");
         plot.addPoints(meanVals, varVals, Plot.CIRCLE);
-        legend.append("Binned Data\n");
+        legend.append(String.format("Binned Data (Grad. threshold = %.3f)\n", gradientThreshold));
         
         double[] fitX, fitY;        
         double[] limits = new double[] {Arrays.stream(meanVals).min().getAsDouble(),
@@ -374,12 +374,14 @@ public class NoiseStatistics implements Command {
 								Arrays.stream(varVals).max().getAsDouble()};
 
         // Add threshold lines
+		plot.setLineWidth(1);
         plot.setColor("red");
         plot.drawDottedLine(rangeAnalysis[0], limits[2], rangeAnalysis[0], limits[3], 1);
         plot.setColor("cyan");
         plot.drawDottedLine(rangeAnalysis[1], limits[2], rangeAnalysis[1], limits[3], 1);
         
         // Add free fit line if requested
+		plot.setLineWidth(1.5f);
         if (showSNR) {
             fitX = new double[] {rangeAnalysis[0], rangeAnalysis[1]};
             double intercept = -slope * i0;
@@ -387,9 +389,8 @@ public class NoiseStatistics implements Command {
                 slope * fitX[0] + intercept,
                 slope * fitX[1] + intercept
             };
-            plot.setColor("black");
-            plot.addPoints(fitX, fitY, Plot.LINE);
-            
+			plot.setColor(new Color(170, 0, 255));
+			plot.addPoints(fitX, fitY, Plot.LINE);
             legend.append(String.format(
                 "Free fit: SNR = %.3f, I0 = %.3f\n",
                 snr, i0
@@ -405,17 +406,16 @@ public class NoiseStatistics implements Command {
             };
             plot.setColor(new Color(0, 221, 0));
             plot.addPoints(fitX, fitY, Plot.LINE);
-            
             legend.append(String.format(
                 "Constrained fit: SNR1 = %.3f, I1 = %.3f\n",
                 snr1, darkCount
             ));
         }
-        plot.setColor("black");
-        plot.addLabel(0.7, 0.9, String.format("Grad. threshold = %.3f", gradientThreshold));
-        plot.addLegend(legend.toString());
+
+        plot.setColor("BLACK");
+		plot.addLegend(legend.toString());
         plot.setLimits(limits);
-        
+        plot.setFrameSize(900,600);
         return plot;
     }
 
