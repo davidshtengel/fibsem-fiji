@@ -100,7 +100,7 @@ public class GradientMap implements Command {
         }
 
         // Compute gradient map
-        GradientMapData result = GradientMapAnalyzer.computeGradientMap(ip, performSmoothing, normalize, thrMinDisp, thrMaxDisp);
+        GradientMapData result = GradientMapAnalyzer.computeGradientMap(ip, performSmoothing, normalize);
         ImageProcessor gradient = result.getGradient();
 
         // Display result

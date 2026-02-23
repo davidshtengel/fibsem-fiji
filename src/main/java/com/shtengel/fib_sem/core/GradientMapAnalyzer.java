@@ -35,15 +35,11 @@ public class GradientMapAnalyzer {
      * @param ip                source {@link ImageProcessor}, optionally with ROI
      * @param performSmoothing  apply pre-gradient smoothing
      * @param normalize         normalize magnitude by local pixel intensity
-     * @param thrMinDisp        reserved for downstream display scaling
-     * @param thrMaxDisp        reserved for downstream display scaling
      * @return gradient magnitude image wrapped in {@link GradientMapData}
      */
     public static GradientMapData computeGradientMap(ImageProcessor ip, 
     		boolean performSmoothing, 
-    		boolean normalize, 
-    		double thrMinDisp, 
-    		double thrMaxDisp) {
+    		boolean normalize) {
 
         // Crop to ROI if present
         ImageProcessor ipToProcess = (ip.getRoi() != null) ? ip.crop() : ip;
