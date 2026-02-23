@@ -153,7 +153,7 @@ public class NoiseStatistics implements Command {
     private boolean showDialog() {
 		getAllPersistedParams();
 		
-    	GenericDialog gd = new GenericDialog("Noise Statistics (Single Image)");
+    	GenericDialog gd = new GenericDialog("Noise Statistics Analysis (Single Image)");
     	
     	gd.addMessage("These parameters are set to exclude the pixels with highest and lowest intensities\nfrom the analysis. Set the thresholds to 0.0 to include all pixels.");
         gd.addNumericField("Analysis CDF threshold (lower)", thrMinAnalysis, 3, 6, "");
@@ -205,9 +205,7 @@ public class NoiseStatistics implements Command {
             return false;
 		}
 
-		IJ.log("DEBUG: passed validation, about to save params");
-		setAllPersistedParams();
-        
+		setAllPersistedParams();        
         return true;
     }
     
