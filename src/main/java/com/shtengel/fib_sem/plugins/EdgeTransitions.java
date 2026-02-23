@@ -24,20 +24,20 @@ import com.shtengel.fib_sem.util.ParamPersister;
 @Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Resolution; Edge Transition Analysis")
 public class EdgeTransitions implements Command {
 	
-    private double lowerBound = 0.37;
-	private double upperBound = 0.63;
-	private double pixelSize = 1.0;
-	private int subsetSize = 25;
-	private double sectionLength = 25.0;
-    private int minMaxAperture = 5;
-	private float transitionLowLimit = 0.5f;
-	private float transitionHighLimit = 10.0f;
-	private int neighborExclusionRadius = 10;
-    private boolean excludeCenter = false;
-    private double centerExclusionRadius = 20;
-	private float thrMinCriterion = 0.15f;
-    private float thrMaxCriterion = 0.15f;
-    private float gradientThreshold = 0.005f;
+    private double lowerBound;
+	private double upperBound;
+	private double pixelSize;
+	private int subsetSize;
+	private double sectionLength;
+    private int minMaxAperture;
+	private float transitionLowLimit;
+	private float transitionHighLimit;
+	private int neighborExclusionRadius;
+    private boolean excludeCenter;
+    private double centerExclusionRadius;
+	private float thrMinCriterion;
+    private float thrMaxCriterion;
+    private float gradientThreshold;
     private boolean saveFigs = false;
     private ImagePlus imp;
     	

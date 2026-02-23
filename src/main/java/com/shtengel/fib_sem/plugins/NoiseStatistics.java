@@ -56,19 +56,19 @@ import java.util.Arrays;
 @Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Noise Statistics Analysis (Single Image)")
 public class NoiseStatistics implements Command {
 	
-	private double thrMinAnalysis = 0.01;
-    private double thrMaxAnalysis = 0.01;
-    private int nbinsAnalysis = 256;
-    private double gradientThreshold = 0.25;
-    private boolean displaySNR = true;
-    private double darkCount = 0.0;
-    private boolean displaySNR1 = false;
+	private double thrMinAnalysis;
+    private double thrMaxAnalysis;
+    private int nbinsAnalysis;
+    private double gradientThreshold;
+    private boolean displaySNR;
+    private double darkCount;
+    private boolean displaySNR1;
     private double thrMinDisp = 0.001;
     private double thrMaxDisp = 0.001;
     private int nbinsDisp = 256;
-    private boolean showMaskVisualization = true;
+    private boolean showMaskVisualization;
+    private boolean saveFigs;
     private ImagePlus imp;
-    private boolean saveFigs = false;
     
     @Override
     public void run() {
