@@ -230,7 +230,7 @@ public class NoiseStatistics implements Command {
         
         // Recompute smoothed image and gradients for visualization
         float[] smoothed = NoiseStatisticsAnalyzer.computeSmoothedImage(ipToProcess);
-        float[] gradients = NoiseStatisticsAnalyzer.computeGradientMagnitudesPublic(ipToProcess.convertToFloatProcessor());
+        float[] gradients = NoiseStatisticsAnalyzer.computeGradientMagnitudes(ipToProcess.convertToFloatProcessor());
         
         FloatProcessor fp = ipToProcess.convertToFloatProcessor();
         double min = fp.getMin();

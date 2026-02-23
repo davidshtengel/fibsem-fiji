@@ -245,7 +245,7 @@ public class NoiseStatisticsAnalyzer {
 	 * @param ip source image processor
 	 * @return flattened array of gradient magnitudes
 	 */
-	public static float[] computeGradientMagnitudesPublic(ImageProcessor ip) {
+	public static float[] computeGradientMagnitudes(ImageProcessor ip) {
 	    FloatProcessor fp = ip.convertToFloatProcessor();
 	    return computeGradientMagnitudes(fp);
 	}
