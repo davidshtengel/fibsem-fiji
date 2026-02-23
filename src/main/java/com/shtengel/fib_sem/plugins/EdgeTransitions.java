@@ -552,21 +552,21 @@ public class EdgeTransitions implements Command {
 	}
 
 	private void getAllPersistedParams() {
-		lowerBound = ParamPersister.get(imp, "R-lowerBound", 0.37);
-		upperBound = ParamPersister.get(imp, "R-upperBound", 0.63);
-		pixelSize = ParamPersister.get(imp, "R-pixelSize", pixelSize);
-        subsetSize = ParamPersister.get(imp, "R-subsetSize", 25);
-		sectionLength = ParamPersister.get(imp, "R-sectionLength", 25.0);
-		minMaxAperture = ParamPersister.get(imp, "R-minMaxAperture", 5);
-        transitionLowLimit = ParamPersister.get(imp, "R-transitionLowLimit", 0.5f);
-        transitionHighLimit = ParamPersister.get(imp, "R-transitionHighLimit", 10.0f);
-        neighborExclusionRadius = ParamPersister.get(imp, "R-neighborExclusionRadius", 20);
-        excludeCenter = ParamPersister.get(imp, "R-excludeCenter", false);
-        centerExclusionRadius = ParamPersister.get(imp, "R-centerExclusionRadius", 10);
-		thrMinCriterion = ParamPersister.get(imp, "R-thrMinCriterion", 0.15f);
-        thrMaxCriterion = ParamPersister.get(imp, "R-thrMaxCriterion", 0.15f);
-        gradientThreshold = ParamPersister.get(imp, "R-gradientThreshold", 0.005f);
-        saveFigs = ParamPersister.get(imp, "R-saveFigs", false);
+		lowerBound = ParamPersister.get(imp, "R_lowerBound", 0.37);
+		upperBound = ParamPersister.get(imp, "R_upperBound", 0.63);
+		pixelSize = ParamPersister.get(imp, "R_pixelSize", pixelSize);
+        subsetSize = ParamPersister.get(imp, "R_subsetSize", 25);
+		sectionLength = ParamPersister.get(imp, "R_sectionLength", 25.0);
+		minMaxAperture = ParamPersister.get(imp, "R_minMaxAperture", 5);
+        transitionLowLimit = ParamPersister.get(imp, "R_transitionLowLimit", 0.5f);
+        transitionHighLimit = ParamPersister.get(imp, "R_transitionHighLimit", 10.0f);
+        neighborExclusionRadius = ParamPersister.get(imp, "R_neighborExclusionRadius", 20);
+        excludeCenter = ParamPersister.get(imp, "R_excludeCenter", false);
+        centerExclusionRadius = ParamPersister.get(imp, "R_centerExclusionRadius", 10);
+		thrMinCriterion = ParamPersister.get(imp, "R_thrMinCriterion", 0.15f);
+        thrMaxCriterion = ParamPersister.get(imp, "R_thrMaxCriterion", 0.15f);
+        gradientThreshold = ParamPersister.get(imp, "R_gradientThreshold", 0.005f);
+        saveFigs = ParamPersister.get(imp, "R_saveFigs", false);
 	}
 
 	private void setAllPersistedParams() {
