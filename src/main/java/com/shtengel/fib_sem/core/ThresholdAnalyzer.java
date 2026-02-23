@@ -35,9 +35,30 @@ public class ThresholdAnalyzer {
         
         // Convert to float
         float[] pixels = (float[]) ipToProcess.convertToFloatProcessor().getPixels();
-        int nPixels = pixels.length;
         
-    	// Compute absolute min and max intensity
+		return computeThresholds(pixels, thrMin, thrMax, nbins);
+    }
+
+	/**
+     * Computes lower and upper intensity thresholds using CDF cutoffs
+     * on a raw array of pixel values.
+     *
+     * <p>
+     * This overload is useful when the pixel data has already been extracted
+     * and/or filtered (e.g. a gradient-filtered subset of a smoothed image
+     * for contrast analysis).
+     * </p>
+     *
+     * @param pixels  array of pixel intensity values
+     * @param thrMin  fraction of lowest-intensity pixels to discard [0, 1]
+     * @param thrMax  fraction of highest-intensity pixels to discard [0, 1]
+     * @param nbins   number of histogram bins
+     * @return container with absolute intensity range, thresholds, PDF, and CDF
+     */
+	public static ThresholdData computeThresholds(float[] pixels, double thrMin, double thrMax, int nbins) {
+		int nPixels = pixels.length;
+		
+		// Compute absolute min and max intensity
         float minInt = Float.MAX_VALUE;
         float maxInt = -Float.MAX_VALUE;
         for (float v : pixels) {
@@ -94,6 +115,22 @@ public class ThresholdAnalyzer {
         double dataMax = minInt + ((idxDataMax + 0.5) * binWidth);
 
         return new ThresholdData(minInt, maxInt, dataMin, dataMax, pdf, cdf);
+	}
+
+	/**
+	 * This overload accepts {@code double[]} data, where the values are narrowed to float for histogram computation.
+	 * @param data    array of pixel intensity values (double precision)
+     * @param thrMin  fraction of lowest-intensity pixels to discard [0, 1]
+     * @param thrMax  fraction of highest-intensity pixels to discard [0, 1]
+     * @param nbins   number of histogram bins
+     * @return container with absolute intensity range, thresholds, PDF, and CDF
+	 */
+	public static ThresholdData computeThresholds(double[] data, double thrMin, double thrMax, int nbins) {
+        float[] floatData = new float[data.length];
+        for (int i = 0; i < data.length; i++) {
+            floatData[i] = (float) data[i];
+        }
+        return computeThresholds(floatData, thrMin, thrMax, nbins);
     }
     
 }
