@@ -386,7 +386,6 @@ public class EdgeTransitions implements Command {
 	    // Calculate X and Y components of transition vectors
 	    double[] transX = new double[transitions.length];
 	    double[] transY = new double[transitions.length];
-	    
 	    for (int i = 0; i < transitions.length; i++) {
 	        transX[i] = cosX[i] * transitions[i];
 	        transY[i] = cosY[i] * transitions[i];
@@ -401,12 +400,9 @@ public class EdgeTransitions implements Command {
 	    
 	    // Create the plot
 	    String plotTitle = String.format("Transition Distribution over Directions: %s", imageTitle);
-	    
 	    Plot plot = new Plot(plotTitle, "Transition X Component (pixels)", "Transition Y Component (pixels)");
 	    plot.setLimits(-maxAbs * 1.1, maxAbs * 1.1, -maxAbs * 1.1, maxAbs * 1.1);
-	    plot.setFrameSize(600, 600);
-	    
-	    // Add grid
+	    plot.setFrameSize(800,800);
 	    plot.setColor(Color.LIGHT_GRAY);
 	    plot.drawLine(-maxAbs * 1.1, 0, maxAbs * 1.1, 0);  // X axis
 	    plot.drawLine(0, -maxAbs * 1.1, 0, maxAbs * 1.1);  // Y axis
@@ -460,11 +456,10 @@ public class EdgeTransitions implements Command {
  		plot.setLineWidth(1);
 	    for(int i = 0; i < transitions.length; i++) {
         	Color color = getTransitionColor(transitions[i], result);
-        	
         	plot.setColor(color);
         	plot.addPoints(new double[] {transX[i]}, new double[] {transY[i]}, Plot.CIRCLE);
 	    }
-	    
+	    plot.setLineWidth(1.5f);
 	    return plot;
 	}
 	
