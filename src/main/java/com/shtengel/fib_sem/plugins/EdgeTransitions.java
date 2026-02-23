@@ -504,16 +504,16 @@ public class EdgeTransitions implements Command {
 		double yMax = maxIntensity + (maxIntensity - minIntensity) * 0.05;
 		double yMin = minIntensity - (maxIntensity - minIntensity) * 0.05;
 		plot.setLimits(xMin, xMax, yMin, yMax);
-		plot.setFrameSize(600, 600);
+		plot.setFrameSize(800, 800);
 		
 		// Plot each profile w/ coloring
+		plot.setLineWidth(0.5f);
 		for (int j = 0; j < nProfiles; j++) {
 			Color color = getColor((double)(nProfiles - j) / nProfiles);
 			plot.setColor(color);
-			plot.setLineWidth(0.5f);
 			plot.addPoints(distNm, imgValsAll[j], Plot.LINE);
 		}
-		
+		plot.setLineWidth(1.5f);
 		return plot;
 	}
 
