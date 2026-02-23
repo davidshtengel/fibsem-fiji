@@ -570,21 +570,21 @@ public class EdgeTransitions implements Command {
 	}
 
 	private void setAllPersistedParams() {
-		ParamPersister.set(imp, "R-lowerBound", lowerBound);
-		ParamPersister.set(imp, "R-upperBound", upperBound);
-		ParamPersister.set(imp, "R-pixelSize", pixelSize);
-        ParamPersister.set(imp, "R-subsetSize", subsetSize);
-		ParamPersister.set(imp, "R-sectionLength", sectionLength);
-		ParamPersister.set(imp, "R-minMaxAperture", minMaxAperture);
-        ParamPersister.set(imp, "R-transitionLowLimit", transitionLowLimit);
-        ParamPersister.set(imp, "R-transitionHighLimit", transitionHighLimit);
-        ParamPersister.set(imp, "R-neighborExclusionRadius", neighborExclusionRadius);
-        ParamPersister.set(imp, "R-excludeCenter", excludeCenter);
-        ParamPersister.set(imp, "R-centerExclusionRadius", centerExclusionRadius);
-		ParamPersister.set(imp, "R-thrMinCriterion", thrMinCriterion);
-        ParamPersister.set(imp, "R-thrMaxCriterion", thrMaxCriterion);
-        ParamPersister.set(imp, "R-gradientThreshold", gradientThreshold);
-        ParamPersister.set(imp, "R-saveFigs", saveFigs);
+		ParamPersister.set(imp, "R_lowerBound", lowerBound);
+		ParamPersister.set(imp, "R_upperBound", upperBound);
+		ParamPersister.set(imp, "R_pixelSize", pixelSize);
+        ParamPersister.set(imp, "R_subsetSize", subsetSize);
+		ParamPersister.set(imp, "R_sectionLength", sectionLength);
+		ParamPersister.set(imp, "R_minMaxAperture", minMaxAperture);
+        ParamPersister.set(imp, "R_transitionLowLimit", transitionLowLimit);
+        ParamPersister.set(imp, "R_transitionHighLimit", transitionHighLimit);
+        ParamPersister.set(imp, "R_neighborExclusionRadius", neighborExclusionRadius);
+        ParamPersister.set(imp, "R_excludeCenter", excludeCenter);
+        ParamPersister.set(imp, "R_centerExclusionRadius", centerExclusionRadius);
+		ParamPersister.set(imp, "R_thrMinCriterion", thrMinCriterion);
+        ParamPersister.set(imp, "R_thrMaxCriterion", thrMaxCriterion);
+        ParamPersister.set(imp, "R_gradientThreshold", gradientThreshold);
+        ParamPersister.set(imp, "R_saveFigs", saveFigs);
 		logParams();
 	}
 
