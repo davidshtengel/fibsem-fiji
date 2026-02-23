@@ -21,7 +21,7 @@ import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
 import com.shtengel.fib_sem.util.ParamPersister;
 
-@Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Resolution; Edge Transitions")
+@Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Resolution; Edge Transition Analysis")
 public class EdgeTransitions implements Command {
 	
     private double lowerBound = 0.37;
@@ -46,7 +46,7 @@ public class EdgeTransitions implements Command {
 		// Get active image
         imp = ImageResolver.resolveSourceImage();
         if (imp == null) {
-            IJ.error("Edge Transitions", "No image open.");
+            IJ.error("Edge Transition Analysis", "No image open.");
             return;
         }
         
@@ -62,7 +62,7 @@ public class EdgeTransitions implements Command {
 		// Get the ImageProcessor
 		ImageProcessor ip = imp.getProcessor();
 		if (ip == null) {
-            IJ.error("Edge Transitions", "Could not access image processor.");
+            IJ.error("Edge Transition Analysis", "Could not access image processor.");
             return;
 		}
 

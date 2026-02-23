@@ -53,7 +53,7 @@ import java.util.Arrays;
  * 
  * @see NoiseStatisticsAnalyzer
  */
-@Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Noise Statistics (Single Image)")
+@Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Noise Statistics Analysis (Single Image)")
 public class NoiseStatistics implements Command {
 	
 	private double thrMinAnalysis = 0.01;
@@ -75,7 +75,7 @@ public class NoiseStatistics implements Command {
     	// Get active image
         imp = ImageResolver.resolveSourceImage();
         if (imp == null) {
-            IJ.error("Noise Statistics", "No image open.");
+            IJ.error("Noise Statistics Analysis", "No image open.");
             return;
         }
         
@@ -86,7 +86,7 @@ public class NoiseStatistics implements Command {
         // Get the ImageProcessor
         ImageProcessor ip = imp.getProcessor();
         if (ip == null) {
-            IJ.error("Noise Statistics", "Could not access image processor.");
+            IJ.error("Noise Statistics Analysis", "Could not access image processor.");
             return;
         }
         
