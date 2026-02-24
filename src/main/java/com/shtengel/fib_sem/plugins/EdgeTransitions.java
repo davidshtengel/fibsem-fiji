@@ -164,7 +164,7 @@ public class EdgeTransitions implements Command {
 	    gd.addNumericField("Section length", sectionLength, 0, 6, "pixels");
 	    gd.addNumericField("Min/max aperture", minMaxAperture, 0, 6, "pixels");
 
-	    gd.addMessage("Threshold parameters:");
+	    gd.addMessage("Threshold parameters (Fractional):");
 	    gd.addNumericField("Gradient threshold", gradientThreshold, 4, 6, "");
 	    gd.addNumericField("Minimum threshold criterion", thrMinCriterion, 2, 6, "");
 	    gd.addNumericField("Maximum threshold criterion", thrMaxCriterion, 2, 6, "");
@@ -226,7 +226,7 @@ public class EdgeTransitions implements Command {
 		return true;
 	}
 	
-	public void logResults(ImagePlus imp, EdgeTransitionData result) {
+	private void logResults(ImagePlus imp, EdgeTransitionData result) {
 	    IJ.log("=== Edge Transition Analysis Results ===");
 	    IJ.log("Image: " + imp.getTitle());
 	    IJ.log("Pixel size: "+ pixelSize);
@@ -255,7 +255,7 @@ public class EdgeTransitions implements Command {
 	    IJ.log("========================================");
 	}
 
-	public void createResultsTable(EdgeTransitionData result, String imageTitle) {
+	private void createResultsTable(EdgeTransitionData result, String imageTitle) {
 	    if (result.getValidCount() == 0) {
 	        IJ.log("No valid transitions to create results table.");
 	        return;

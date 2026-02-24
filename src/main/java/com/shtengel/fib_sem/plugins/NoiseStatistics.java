@@ -63,6 +63,7 @@ public class NoiseStatistics implements Command {
     private boolean displaySNR;
     private double darkCount;
     private boolean displaySNR1;
+	// Display thresholds/bins (not user-configurable, used for visualization only)
     private double thrMinDisp = 0.001;
     private double thrMaxDisp = 0.001;
     private int nbinsDisp = 256;
@@ -83,17 +84,15 @@ public class NoiseStatistics implements Command {
             return;
         }
         
-        // Get the ImageProcessor
         ImageProcessor ip = imp.getProcessor();
         if (ip == null) {
             IJ.error("Noise Statistics Analysis", "Could not access image processor.");
             return;
         }
+
+		Roi roi = imp.getRoi();
         
-        // Get the ROI, if one exists
-        Roi roi = imp.getRoi();
-        
-        // If there's an ROI, set it on the processor -> statistics calculations will respect the ROI bounds
+        // If there's an ROI, set it on the processor - statistics calculations will respect the ROI bounds
         if (roi != null) {
         	ip.setRoi(roi);
         	String roiName = roi.getName() != null ? roi.getName() : "unnamed ROI";
@@ -118,14 +117,12 @@ public class NoiseStatistics implements Command {
 			null // no filter mask
 		);
         
-        // Log results
         logResults(imp, result);
         
-        // Display plot
         Plot noiseDist = plotNoiseDistribution(result, darkCount, displaySNR, displaySNR1, imp.getTitle());
         
-        ImagePlus mask = null;
         // Create mask visualization if requested
+        ImagePlus mask = null;
         if (showMaskVisualization) {
             mask = drawMaskVisual(imp, result);            
         }
@@ -156,15 +153,15 @@ public class NoiseStatistics implements Command {
     	GenericDialog gd = new GenericDialog("Noise Statistics Analysis (Single Image)");
     	
     	gd.addMessage("These parameters are set to exclude the pixels with highest and lowest intensities\nfrom the analysis. Set the thresholds to 0.0 to include all pixels.");
-        gd.addNumericField("Analysis CDF threshold (lower)", thrMinAnalysis, 3, 6, "");
-        gd.addNumericField("Analysis CDF threshold (upper)", thrMaxAnalysis, 3, 6, "");
-        gd.addNumericField("Number of bins (analysis)", nbinsAnalysis, 0, 6, "");
+        gd.addNumericField("CDF threshold (lower)", thrMinAnalysis, 3, 6, "");
+        gd.addNumericField("CDF threshold (upper)", thrMaxAnalysis, 3, 6, "");
+        gd.addNumericField("Number of bins", nbinsAnalysis, 0, 6, "");
         
-        gd.addMessage("This parameter is set to exclude the pixels with highest local gradient from the\nanalysis. Set to 1.0 to include all pixels. Set to 0.25 to only consider 25% of pixels\nwith the lowest local intensity gradient.");
-        gd.addNumericField("Gradient threshold (lower)", gradientThreshold, 2, 6, "");
+        gd.addMessage("This parameter is set to exclude the pixels with highest local gradient from the\nanalysis. Set to 1.0 to include all pixels. Set to 0.50 to only consider 50% of pixels\nwith the lowest local intensity gradient.");
+        gd.addNumericField("Gradient threshold (upper)", gradientThreshold, 2, 6, "");
         gd.addCheckbox("Show SNR0 (free fit)", displaySNR);
-        gd.addNumericField("Dark Count (intensity at zero variance)", darkCount, 1, 6, "");
-        gd.addCheckbox("Show SNR1 (with dark count)", displaySNR1);
+        gd.addNumericField("User-defined Dark Count (intensity at zero variance)", darkCount, 1, 6, "");
+        gd.addCheckbox("Show SNR1 (with user-defined dark count)", displaySNR1);
         
         gd.addMessage("Visualization options:");
         gd.addCheckbox("Show mask visualization", showMaskVisualization);
@@ -172,7 +169,6 @@ public class NoiseStatistics implements Command {
 	    gd.addMessage("Export:");
 	    gd.addCheckbox("Save image/plot as titled figures", saveFigs);
         
-        // Show dialog and handle user cancellation
         gd.showDialog();
         if (gd.wasCanceled()) {
             return false;
@@ -216,11 +212,8 @@ public class NoiseStatistics implements Command {
     private ImagePlus drawMaskVisual(ImagePlus imp, NoiseStatisticsData result) {
     	String imageTitle = imp.getTitle();
     	ImageProcessor ip = imp.getProcessor();
-    	
-    	// Crop to ROI if present
-    	ImageProcessor ipToProcess = ImageResolver.cropToRoiIfPresent(ip);
-        
-        int width = ipToProcess.getWidth();
+		ImageProcessor ipToProcess = ImageResolver.cropToRoiIfPresent(ip);
+		int width = ipToProcess.getWidth();
         int height = ipToProcess.getHeight();
         
         // Get analysis parameters from result
@@ -266,9 +259,9 @@ public class NoiseStatistics implements Command {
                 } else {
                 	float pixelValue = fp.getf(x, y);
                     int scaledValue = (int) (255.0 * (pixelValue - min) / (max - min));
-                    scaledValue = Math.min(255, Math.max(0, scaledValue));
-                    
-                    color = (scaledValue << 16) | (scaledValue << 8) | scaledValue;                }
+                    scaledValue = Math.min(255, Math.max(0, scaledValue));    
+                    color = (scaledValue << 16) | (scaledValue << 8) | scaledValue;                
+				}
                 maskVis.set(x, y, color);
             }
         }
@@ -289,9 +282,7 @@ public class NoiseStatistics implements Command {
         return maskImp;
     }
     
-    /**
-     * Displays a results table showing the cutoff values for each exclusion category
-     */
+    /** Displays a results table showing the cutoff values for each exclusion category. */
     private void displayCutoffValuesTable(double minThreshold, double maxThreshold, float gradientCutoff, String imageTitle) {
         ij.measure.ResultsTable rt = new ij.measure.ResultsTable();
         
@@ -307,7 +298,6 @@ public class NoiseStatistics implements Command {
         rt.addLabel("High Gradient (Blue)");
         rt.addValue("Cutoff Value", gradientCutoff);
                 
-        // Show the table
         rt.show("Mask Cutoff Values: " + imageTitle);
     }
         
@@ -318,7 +308,7 @@ public class NoiseStatistics implements Command {
     	IJ.log("=== Noise Statistics Analysis ===");
         IJ.log("Image: " + imp.getTitle());
         IJ.log("");
-        IJ.log("Gradient Threshold: " + gradientThreshold);;
+        IJ.log("Gradient Threshold: " + gradientThreshold);
         IJ.log("Display range: " + String.format("%.2f to %.2f", 
             result.getRangeDisplay()[0], result.getRangeDisplay()[1]));
         IJ.log("Analysis range: " + String.format("%.2f to %.2f", 
@@ -336,9 +326,7 @@ public class NoiseStatistics implements Command {
         IJ.log("SNR1 <S^2>/<N^2>: " + String.format("%.2f", result.getSNR1()));
     }
        
-	/**
-     * Creates a plot showing variance vs mean intensity with fitted lines
-     */
+	/** Creates a plot showing variance vs mean intensity with fitted lines */
     private Plot plotNoiseDistribution(
     		NoiseStatisticsData result,
             double darkCount,
@@ -423,7 +411,7 @@ public class NoiseStatistics implements Command {
 		thrMinAnalysis = ParamPersister.get(imp, "N_thrMinAnalysis", 0.01);
 		thrMaxAnalysis = ParamPersister.get(imp, "N_thrMaxAnalysis", 0.01);
 		nbinsAnalysis = ParamPersister.get(imp, "N_nbinsAnalysis", 256);
-        gradientThreshold = ParamPersister.get(imp, "N_gradientThreshold", 0.25);
+        gradientThreshold = ParamPersister.get(imp, "N_gradientThreshold", 0.50);
 		displaySNR = ParamPersister.get(imp, "N_displaySNR", true);
 		darkCount = ParamPersister.get(imp, "N_darkCount", 0.0);
         displaySNR1 = ParamPersister.get(imp, "N_displaySNR1", false);
