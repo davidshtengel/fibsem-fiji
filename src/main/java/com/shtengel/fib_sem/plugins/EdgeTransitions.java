@@ -154,7 +154,7 @@ public class EdgeTransitions implements Command {
 
 		GenericDialog gd = new GenericDialog("Edge Transition Analysis");
 
-		gd.addMessage("Transition bounds:");
+		gd.addMessage("Transition parameters:");
 	    gd.addNumericField("Lower bound", lowerBound, 2, 6, "");
 	    gd.addNumericField("Upper bound", upperBound, 2, 6, "");
 
@@ -164,19 +164,19 @@ public class EdgeTransitions implements Command {
 	    gd.addNumericField("Section length", sectionLength, 0, 6, "pixels");
 	    gd.addNumericField("Min/max aperture", minMaxAperture, 0, 6, "pixels");
 
-	    gd.addMessage("Transition limits:");
-	    gd.addNumericField("Transition low limit", transitionLowLimit, 1, 6, "pixels");
-	    gd.addNumericField("Transition high limit", transitionHighLimit, 1, 6, "pixels");
+	    gd.addMessage("Threshold parameters:");
+	    gd.addNumericField("Gradient threshold", gradientThreshold, 4, 6, "");
+	    gd.addNumericField("Minimum threshold criterion", thrMinCriterion, 2, 6, "");
+	    gd.addNumericField("Maximum threshold criterion", thrMaxCriterion, 2, 6, "");
 	    
 	    gd.addMessage("Exclusion parameters:");
 	    gd.addNumericField("Neighbor exclusion radius", neighborExclusionRadius, 0, 6, "pixels");
 	    gd.addCheckbox("Exclude center", excludeCenter);
 	    gd.addNumericField("Center exclusion radius", centerExclusionRadius, 0, 6, "pixels");
 	    
-	    gd.addMessage("Threshold parameters:");
-	    gd.addNumericField("Minimum threshold criterion", thrMinCriterion, 2, 6, "");
-	    gd.addNumericField("Maximum threshold criterion", thrMaxCriterion, 2, 6, "");
-	    gd.addNumericField("Gradient threshold", gradientThreshold, 4, 6, "");
+	    gd.addMessage("Transition parameters:");
+	    gd.addNumericField("Transition low limit", transitionLowLimit, 1, 6, "pixels");
+	    gd.addNumericField("Transition high limit", transitionHighLimit, 1, 6, "pixels");
 
 	    gd.addMessage("Export:");
 	    gd.addCheckbox("Save image/plot as titled figures", saveFigs);
@@ -191,14 +191,14 @@ public class EdgeTransitions implements Command {
 	    subsetSize = (int) gd.getNextNumber();
 	    sectionLength = gd.getNextNumber();
 	    minMaxAperture = (int) gd.getNextNumber();
-	    transitionLowLimit = (float) gd.getNextNumber();
-	    transitionHighLimit = (float) gd.getNextNumber();
+	    gradientThreshold = (float) gd.getNextNumber();
+	    thrMinCriterion = (float) gd.getNextNumber();
+	    thrMaxCriterion = (float) gd.getNextNumber();
 	    neighborExclusionRadius = (int) gd.getNextNumber();
 	    excludeCenter = gd.getNextBoolean();
 	    centerExclusionRadius = gd.getNextNumber();
-	    thrMinCriterion = (float) gd.getNextNumber();
-	    thrMaxCriterion = (float) gd.getNextNumber();
-	    gradientThreshold = (float) gd.getNextNumber();
+	    transitionLowLimit = (float) gd.getNextNumber();
+	    transitionHighLimit = (float) gd.getNextNumber();
 	    saveFigs = gd.getNextBoolean();
 
 		// Validation
