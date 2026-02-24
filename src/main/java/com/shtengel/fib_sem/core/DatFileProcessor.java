@@ -71,10 +71,10 @@ public class DatFileProcessor {
      * </ol>
      * 
      * @param file	the .dat file to read
-     * @returns a FileTypeData object containing the parsed header and raw image data
+     * @return a {@link FileData} object containing the parsed header and raw image data
      * @throws IOException if the file cannot be read, is not a valid .dat file (wrong magic number), or if the header/data sections are incomplete.
      * @throws IllegalArgumentException if the file is null
-    */
+     */
     public FileData readDatFile(File file) throws IOException {
     	try(RandomAccessFile raf = new RandomAccessFile(file, "r"); 
     		FileChannel channel = raf.getChannel()) {
@@ -301,7 +301,8 @@ public class DatFileProcessor {
                 }
             }
         } else {
-        	// "Edge" case, read 8 floats and transpose
+        	// Version 7+ stores scaling flat as [coeff0_ch0, coeff1_ch0, ..., coeff3_ch1];
+        	// read the 8 floats then transpose into [channel][coefficient] layout
         	float[] rawScaling = new float[8];
         	for (int i = 0; i < 8; i++) {
         		rawScaling[i] = buffer.getFloat();
@@ -344,7 +345,7 @@ public class DatFileProcessor {
             header.setDetMax(10);
         } else {
         	// Version 4+ format
-    		header.setOversampling(buffer.getShort() & 0xFFFF);
+    		header.setOversampling(buffer.getShort(108) & 0xFFFF);
     		header.setScanRate(buffer.getFloat(112));
     		header.setFramelineRampdown(buffer.getFloat(116));
     		header.setXmin(buffer.getFloat(120));

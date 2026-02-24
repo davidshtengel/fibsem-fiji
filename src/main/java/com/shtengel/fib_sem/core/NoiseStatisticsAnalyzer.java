@@ -507,7 +507,7 @@ public class NoiseStatisticsAnalyzer {
         for (int i = 0; i < signal.length; i++) {
             double s = signal[i] - offset;
             sumSigSq += s * s;
-            sumNoiseSq += noise[i] * (double) noise[i];
+            sumNoiseSq += noise[i] * noise[i];
         }
            
         return sumNoiseSq > 0 ? (sumSigSq / signal.length) / (sumNoiseSq / noise.length) : 0;

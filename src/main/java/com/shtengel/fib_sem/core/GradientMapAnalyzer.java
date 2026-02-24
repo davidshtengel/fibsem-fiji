@@ -41,10 +41,7 @@ public class GradientMapAnalyzer {
     		boolean performSmoothing, 
     		boolean normalize) {
 
-        // Crop to ROI if present
         ImageProcessor ipToProcess = (ip.getRoi() != null) ? ip.crop() : ip;
-        
-        // Convert to float for precision
         FloatProcessor fp = ipToProcess.convertToFloatProcessor();
         int width = fp.getWidth();
         int height = fp.getHeight();
@@ -52,11 +49,8 @@ public class GradientMapAnalyzer {
         float[][] components = computeGradientComponents(fp, performSmoothing);
         float[] gradX = components[0];
         float[] gradY = components[1];
-        
-        // Gradient component buffers
-        float[] absGrad = computeGradientMagnitude(gradX, gradY, fp, normalize);
+		float[] absGrad = computeGradientMagnitude(gradX, gradY, fp, normalize);
                 
-        // Output processor matches processed (ROI-cropped) dimensions
         FloatProcessor gradProcessor = new FloatProcessor(width, height, absGrad);
         
         return new GradientMapData(gradProcessor);
@@ -100,7 +94,7 @@ public class GradientMapAnalyzer {
      * but returns the directional components instead of magnitude.
      * </p>
      *
-     * @param ip source image processor (will be cropped to ROI if present)
+     * @param fp source image processor (will be cropped to ROI if present)
      * @param performSmoothing whether to apply default smoothing before gradient computation
      * @return float[2][] where [0] is gradX and [1] is gradY (flattened arrays)
      */
@@ -138,6 +132,8 @@ public class GradientMapAnalyzer {
      *
      * @param gradX X gradient component (flattened array)
      * @param gradY Y gradient component (flattened array)
+	 * @param fp        source float processor (used for normalization)
+	 * @param normalize whether to divide magnitude by local intensity
      * @return gradient magnitude array (same length as input arrays)
      */
     public static float[] computeGradientMagnitude(float[] gradX, float[] gradY, FloatProcessor fp, boolean normalize) {

@@ -21,6 +21,16 @@ import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
 import com.shtengel.fib_sem.util.ParamPersister;
 
+/**
+ * ImageJ plugin for measuring edge transition distances in FIB-SEM images.
+ *
+ * <p>Detects edges via gradient thresholding, measures transition widths
+ * along gradient directions using intensity profile interpolation, and
+ * fits a directional ellipse to characterize anisotropy.</p>
+ *
+ * @see EdgeTransitionAnalyzer
+ * @see EdgeTransitionData
+ */
 @Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Resolution; Edge Transition Analysis")
 public class EdgeTransitions implements Command {
 	
@@ -166,7 +176,7 @@ public class EdgeTransitions implements Command {
 	    gd.addMessage("Threshold parameters:");
 	    gd.addNumericField("Minimum threshold criterion", thrMinCriterion, 2, 6, "");
 	    gd.addNumericField("Maximum threshold criterion", thrMaxCriterion, 2, 6, "");
-	    gd.addNumericField("Gradient threshold", gradientThreshold, 4, 6, ""); // Might need to add clarifying comment
+	    gd.addNumericField("Gradient threshold", gradientThreshold, 4, 6, "");
 
 	    gd.addMessage("Export:");
 	    gd.addCheckbox("Save image/plot as titled figures", saveFigs);

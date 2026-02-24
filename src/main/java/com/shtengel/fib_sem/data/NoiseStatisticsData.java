@@ -47,7 +47,17 @@ public class NoiseStatisticsData {
     /** Intensity range used for display and histogram visualization. */
     private final double[] rangeDisplay;
     
-    public NoiseStatisticsData(double[] meanValues, double[] varianceValues, double i0, double snr, double snr1, double slope, double slopeHeader, double iPeak, double varPeak, double[] rangeAnalysis, double[] rangeDisplay) {
+    public NoiseStatisticsData(double[] meanValues, 
+							double[] varianceValues, 
+							double i0, 
+							double snr, 
+							double snr1, 
+							double slope, 
+							double slopeHeader, 
+							double iPeak, 
+							double varPeak, 
+							double[] rangeAnalysis, 
+							double[] rangeDisplay) {
         this.meanValues = meanValues;
         this.varianceValues = varianceValues;
         this.i0 = i0;

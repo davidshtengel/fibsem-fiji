@@ -86,7 +86,7 @@ public class Thresholds implements Command {
         // Get the ROI, if one exists
         Roi roi = imp.getRoi();
         
-        // If there's an ROI, set it on the processor -> statistics calculations will respect the ROI bounds
+        // If there's an ROI, set it on the processor, so statistics calculations respect ROI bounds
         if (roi != null) {
         	ip.setRoi(roi);
         	String roiName = roi.getName() != null ? roi.getName() : "unnamed ROI";

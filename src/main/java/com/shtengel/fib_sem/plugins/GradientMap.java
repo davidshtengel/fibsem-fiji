@@ -80,14 +80,12 @@ public class GradientMap implements Command {
             return;
         }
         
-        // Get the ImageProcessor
         ImageProcessor ip = imp.getProcessor();
         if (ip == null) {
             IJ.error("Gradient Mapping", "Could not access image processor.");
             return;
         }
         
-        // Get the ROI, if one exists
         Roi roi = imp.getRoi();
         
         // Set ROI on the processor, if one exists
@@ -99,7 +97,6 @@ public class GradientMap implements Command {
         	IJ.log("Processing entire image (no ROI selected)");
         }
 
-        // Compute gradient map
         GradientMapData result = GradientMapAnalyzer.computeGradientMap(ip, performSmoothing, normalize);
         ImageProcessor gradient = result.getGradient();
 
@@ -116,10 +113,8 @@ public class GradientMap implements Command {
         	        dir = fi.directory;
         	    }
         	    
-        	    String baseName = getBaseName(imp);
-            	FigBuilder.createAndSave(gradImp,
-            					"Gradient Map",
-            					dir + baseName + "_gradient_map.png");
+        	    String baseName = ImageResolver.getBaseName(imp);
+            	FigBuilder.createAndSave(gradImp, "Gradient Map", dir + baseName + "_gradient_map.png");
             }
             
             gradImp.show();
@@ -127,13 +122,4 @@ public class GradientMap implements Command {
         
         IJ.log("Gradient map computed with parameters.");
     }
-    
-    /**
-	 * Helper to get base filename without extension
-	 */
-	private String getBaseName(ImagePlus imp) {
-	    String title = imp.getTitle();
-	    int dot = title.lastIndexOf('.');
-	    return (dot > 0) ? title.substring(0, dot) : title;
-	}
 }

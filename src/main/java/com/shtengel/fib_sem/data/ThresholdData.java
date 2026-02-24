@@ -1,7 +1,7 @@
 package com.shtengel.fib_sem.data;
 
 /**
- * Immutable container for histogram-based threshold analysis results.
+ * Container for histogram-based threshold analysis results.
  *
  * <p>
  * Holds absolute intensity bounds, computed quantile thresholds,
