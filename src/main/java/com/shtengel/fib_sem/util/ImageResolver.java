@@ -5,11 +5,18 @@ import ij.ImagePlus;
 import ij.WindowManager;
 import ij.process.ImageProcessor;
 
+/**
+ * Resolves the current source image for plugin use, caching the last valid reference.
+ *
+ * <p>Filters out color RGB images, images with colons in the title (composite/etc.),
+ * and Plot windows.</p>
+ */
 public class ImageResolver {
 	private static ImagePlus lastSourceImage = null;
 	
 	private ImageResolver() {}
 	
+	/** Returns the current valid image, falling back to the last resolved image. */
 	public static ImagePlus resolveSourceImage() {
 		ImagePlus imp = WindowManager.getCurrentImage();
 		
@@ -26,6 +33,7 @@ public class ImageResolver {
 		return null;
 	}
 	
+	/** Returns the candidate if valid, else the current image, else the last resolved image. */
 	public static ImagePlus resolveSourceImage(ImagePlus candidate) {
 	    if (isValidSourceImage(candidate)) {
 	        lastSourceImage = candidate;
@@ -61,6 +69,7 @@ public class ImageResolver {
 	    return (dot > 0) ? title.substring(0, dot) : title;
 	}
 	
+	/** Crops the processor to its ROI if one is present, otherwise returns it unchanged. */
 	public static ImageProcessor cropToRoiIfPresent(ImageProcessor ip) {
 		return (ip.getRoi() != null ? ip.crop() : ip);
 	}
