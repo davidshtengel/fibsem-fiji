@@ -120,6 +120,11 @@ public class NoiseStatistics implements Command {
 		);
         
         logResults(imp, result);
+
+		// Persist computed I0 for contrast calculation
+		double i0 = result.getI0();
+		ParamPersister.set(imp, "C_ranSNR", true);
+		ParamPersister.set(imp, "C_i0", i0);
         
         Plot noiseDist = plotNoiseDistribution(result, darkCount, displaySNR, displaySNR1, imp.getTitle());
         

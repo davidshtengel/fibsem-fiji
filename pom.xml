@@ -14,11 +14,11 @@
 
 	<groupId>com.shtengel</groupId>
 	<artifactId>fib_sem</artifactId>
-	<version>1.1.1</version>
+	<version>1.2.0</version>
 
 	<name>FIB-SEM Toolkit</name>
 	<description>Custom FIB-SEM image analysis tools for ImageJ/Fiji</description>
-	<url>https://github.com</url>
+	<url>https://github.com/davidshtengel/fibsem-fiji</url>
 	<inceptionYear>2026</inceptionYear>
 	<organization>
 		<name>github</name>
@@ -27,8 +27,8 @@
 
 	<licenses>
 		<license>
-			<name>CC0 1.0 Universal License</name>
-			<url>http://creativecommons.org/publicdomain/zero/1.0/</url>
+			<name>BSD 3-Clause License</name>
+			<url>https://github.com/davidshtengel/fibsem-fiji?tab=BSD-3-Clause-1-ov-file</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
@@ -66,11 +66,11 @@
 		<connection>scm:git:git://github.com/[MY-ORG]/[MY-REPO]</connection>
 		<developerConnection>scm:git:git@github.com:[MY-ORG]/[MY-REPO]</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/[MY-ORG]/[MY-REPO]</url>
+		<url>https://github.com/davidshtengel/fibsem-fiji</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>http://github.com/[MY-ORG]/[MY-REPO]/issues</url>
+		<url>https://github.com/davidshtengel/fibsem-fiji/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>None</system>
@@ -78,7 +78,7 @@
 
     <properties> 
 		<package-name>com.shtengel.fib_sem</package-name>
-        <license.licenseName>bsd_2</license.licenseName>
+        <license.licenseName>bsd_3</license.licenseName>
         <license.copyrightOwners>David Shtengel</license.copyrightOwners>
 	</properties>
 
