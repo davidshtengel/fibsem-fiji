@@ -1,5 +1,9 @@
 package com.shtengel.fib_sem.plugins;
 
+import java.awt.Color;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
@@ -18,8 +22,6 @@ import ij.io.FileInfo;
 import ij.process.ColorProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import java.awt.Color;
-import java.util.Arrays;
 
 /**
  * ImageJ plugin for characterizing noise properties in FIB-SEM images.
@@ -433,16 +435,16 @@ public class NoiseStatistics implements Command {
 	}
 
 	private void logParams() {
-		IJ.log("--- Parameters - Noise Statistics ---");
-		IJ.log("Analysis CDF threshold (lower): " + thrMinAnalysis);
-		IJ.log("Analysis CDF threshold (upper): " + thrMaxAnalysis);
-		IJ.log("Number of bins (analysis): " + nbinsAnalysis);
-		IJ.log("Gradient threshold: " + gradientThreshold);
-		IJ.log("Display SNR0: " + displaySNR);
-		IJ.log("Dark count: " + darkCount);
-		IJ.log("Display SNR1: " + displaySNR1);
-		IJ.log("Show mask visualization: " + showMaskVisualization);
-		IJ.log("Save figures: " + saveFigs);
-		IJ.log("-------------------------------------");
+		LinkedHashMap<String, Object> params = new LinkedHashMap<>();
+		params.put("Analysis CDF threshold (lower)", thrMinAnalysis);
+		params.put("Analysis CDF threshold (upper)", thrMaxAnalysis);
+		params.put("Number of bins (analysis)", nbinsAnalysis);
+		params.put("Gradient threshold", gradientThreshold);
+		params.put("Display SNR0", displaySNR);
+		params.put("Dark count", darkCount);
+		params.put("Display SNR1", displaySNR1);
+		params.put("Show mask visualization", showMaskVisualization);
+		params.put("Save figures", saveFigs);
+		ParamPersister.logParams("Parameters - Noise Statistics", params);
 	}
 }

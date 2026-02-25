@@ -13,6 +13,7 @@ import ij.gui.PointRoi;
 import ij.gui.Roi;
 import java.awt.Color;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 
 import com.shtengel.fib_sem.core.EdgeTransitionAnalyzer;
 import com.shtengel.fib_sem.data.EdgeTransitionData;
@@ -599,24 +600,24 @@ public class EdgeTransitions implements Command {
 	}
 
 	private void logParams() {
-    IJ.log("--- Parameters - Edge Transitions ---");
-    IJ.log("Lower bound: " + lowerBound);
-    IJ.log("Upper bound: " + upperBound);
-    IJ.log("Pixel size: " + pixelSize + " nm");
-    IJ.log("Subset size: " + subsetSize + " px");
-    IJ.log("Section length: " + sectionLength + " px");
-    IJ.log("Min/max aperture: " + minMaxAperture + " px");
-    IJ.log("Transition low limit: " + transitionLowLimit + " px");
-    IJ.log("Transition high limit: " + transitionHighLimit + " px");
-    IJ.log("Neighbor exclusion radius: " + neighborExclusionRadius + " px");
-    IJ.log("Exclude center: " + excludeCenter);
-    IJ.log("Center exclusion radius: " + centerExclusionRadius + " px");
-    IJ.log("Min threshold criterion: " + thrMinCriterion);
-    IJ.log("Max threshold criterion: " + thrMaxCriterion);
-    IJ.log("Gradient threshold: " + gradientThreshold);
-    IJ.log("Save figures: " + saveFigs);
-    IJ.log("-------------------------------------");
-}
+        LinkedHashMap<String, Object> params = new LinkedHashMap<>();
+        params.put("Lower bound", lowerBound);
+        params.put("Upper bound", upperBound);
+        params.put("Pixel size (nm)", pixelSize);
+        params.put("Subset size (px)", subsetSize);
+        params.put("Section length (px)", sectionLength);
+        params.put("Min/max aperture (px)", minMaxAperture);
+        params.put("Transition low limit (px)", transitionLowLimit);
+        params.put("Transition high limit (px)", transitionHighLimit);
+        params.put("Neighbor exclusion radius (px)", neighborExclusionRadius);
+        params.put("Exclude center", excludeCenter);
+        params.put("Center exclusion radius (px)", centerExclusionRadius);
+        params.put("Min threshold criterion", thrMinCriterion);
+        params.put("Max threshold criterion", thrMaxCriterion);
+        params.put("Gradient threshold", gradientThreshold);
+        params.put("Save figures", saveFigs);
+        ParamPersister.logParams("Parameters - Edge Transitions", params);
+    }
 
 	private boolean validateBounds(double lower, double upper) {
 		if (lower < 0 || lower > 1 || upper < 0 || upper > 1) {
