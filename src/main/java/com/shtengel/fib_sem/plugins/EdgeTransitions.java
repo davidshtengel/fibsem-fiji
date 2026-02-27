@@ -32,7 +32,7 @@ import com.shtengel.fib_sem.util.ParamPersister;
  * @see EdgeTransitionAnalyzer
  * @see EdgeTransitionData
  */
-@Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Resolution; Edge Transition Analysis")
+@Plugin(type = Command.class, menuPath = "Plugins > FIB-SEM > Resolution: Edge Transition Analysis")
 public class EdgeTransitions implements Command {
 	
     private double lowerBound;
@@ -571,7 +571,7 @@ public class EdgeTransitions implements Command {
 		minMaxAperture = ParamPersister.get(imp, "R_minMaxAperture", 5);
         transitionLowLimit = ParamPersister.get(imp, "R_transitionLowLimit", 0.5f);
         transitionHighLimit = ParamPersister.get(imp, "R_transitionHighLimit", 10.0f);
-        neighborExclusionRadius = ParamPersister.get(imp, "R_neighborExclusionRadius", 20);
+        neighborExclusionRadius = ParamPersister.get(imp, "R_neighborExclusionRadius", 10);
         excludeCenter = ParamPersister.get(imp, "R_excludeCenter", false);
         centerExclusionRadius = ParamPersister.get(imp, "R_centerExclusionRadius", 10);
 		thrMinCriterion = ParamPersister.get(imp, "R_thrMinCriterion", 0.15f);
