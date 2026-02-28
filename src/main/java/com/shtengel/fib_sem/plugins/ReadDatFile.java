@@ -195,7 +195,7 @@ public class ReadDatFile implements Command {
 	/**
 	 * Convert sample ID into a cross-platform compatible "sanitized" string
 	 */
-	public static String getSafeFileString(String id) {
+	private static String getSafeFileString(String id) {
 		if (id== null) {
 			return "null";
 		}
