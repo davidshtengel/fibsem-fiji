@@ -65,7 +65,8 @@ public class NoiseStatistics implements Command {
     private boolean displaySNR;
     private double darkCount;
     private boolean displaySNR1;
-	// Display thresholds/bins (not user-configurable, used for visualization only)
+	// Fixed display-range parameters (not exposed in the dialog); used only to compute
+	// the intensity axis limits for the variance-mean plot.
     private double thrMinDisp = 0.001;
     private double thrMaxDisp = 0.001;
     private int nbinsDisp = 256;

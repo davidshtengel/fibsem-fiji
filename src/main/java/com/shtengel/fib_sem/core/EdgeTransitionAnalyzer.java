@@ -20,7 +20,24 @@ import com.shtengel.fib_sem.util.ImageResolver;
  * lower/upper bounds between local min and max.</p>
  */
 public class EdgeTransitionAnalyzer {
-
+	/**
+	 * Measures the edge transition distance at a single edge point.
+	 *
+	 * <p>Extracts an intensity profile along the gradient direction using bilinear
+	 * interpolation, locates local min/max within a configurable aperture, validates
+	 * against threshold criteria, then interpolates the exact positions where the
+	 * profile crosses the lower and upper transition bounds.</p>
+	 *
+	 * @return a {@link TransitionResult} with errorFlag == 0 on success, or a
+	 *         non-zero flag indicating the failure mode:
+	 *         <ul>
+	 *           <li>1 — local minimum exceeds the minimum intensity criterion</li>
+	 *           <li>2 — local maximum falls below the maximum intensity criterion</li>
+	 *           <li>4 — crossing point not found or transition out of range</li>
+	 *           <li>8 — transition distance below low limit</li>
+	 *           <li>16 — transition distance is NaN</li>
+	 *         </ul>
+   	 */
     public static EdgeTransitionData analyzeEdgeTransitions(
             ImageProcessor ip,
             double lowerBound,

@@ -56,7 +56,9 @@ public class ImageResolver {
 	private static boolean isValidSourceImage(ImagePlus imp) {
         if (imp == null) return false;
         if (imp.getType() == ImagePlus.COLOR_RGB) return false;
-        if (imp.getTitle().contains(":")) {return false;}
+        // Reject images whose titles contain ":" — this filters out plugin result windows
+		// (e.g., "Gradient Map: image.dat", "Mask Visualization: image.dat") and composite images.
+		if (imp.getTitle().contains(":")) {return false;}
         return !imp.getTitle().startsWith("Plot");
     }
 	

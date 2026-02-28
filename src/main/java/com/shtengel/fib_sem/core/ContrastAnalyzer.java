@@ -6,11 +6,7 @@ import com.shtengel.fib_sem.data.*;
 import ij.process.*;
 
 /**
- * Computes contrast between high- and low-intensity phases of a FIB-SEM image.
- *
- * <p>Applies gradient filtering to retain low-texture pixels, then uses CDF-based
- * thresholds to identify the two intensity peaks. The contrast metric is
- * {@code (I_high - I_low) / (I_mean - I0)}.</p>
+ * Computes the contrast metric for bimodal FIB-SEM intensity distributions.
  *
  * @see ContrastData
  */

@@ -3,9 +3,8 @@ package com.shtengel.fib_sem.data;
 import java.util.Objects;
 
 /**
- * Container for file data, including
- * - Header information
- * - Raw image data
+ * Immutable container holding a parsed .dat file: its {@link HeaderData header},
+ * raw image bytes, and source filename.
  */
 public class FileData {
 	
