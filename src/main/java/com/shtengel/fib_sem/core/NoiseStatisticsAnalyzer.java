@@ -66,12 +66,7 @@ public class NoiseStatisticsAnalyzer {
 	    FloatProcessor fp = ipToProcess.convertToFloatProcessor();
 		int width = fp.getWidth();
 		int height = fp.getHeight();
-				
-		// Use default kernel if not provided
-		if (kernel == null) {
-			kernel = getDefaultSmoothingKernel();
-		}
-		
+	
 		// Smooth the image (convolution respects ROI internally)
 		FloatProcessor fpSmoothed = smoothImage(fp, kernel);
         
@@ -323,52 +318,20 @@ public class NoiseStatisticsAnalyzer {
 	    
 	    return sorted[cutoffIndex];
 	}
-	
-	/**
-     * Default 3x3 smoothing kernel used to estimate local signal.
-     */
-    private static float[] getDefaultSmoothingKernel() {
-        double st = 1.0 / Math.sqrt(2.0);
-        float[] kernel = new float[] {
-            (float)st, 1f, (float)st,
-            1f, 1f, 1f,
-            (float)st, 1f, (float)st
-        };
-        
-        // Normalize
-        float sum = 0;
-        for (float v : kernel) sum += v;
-        for (int i = 0; i < kernel.length; i++) {
-            kernel[i] /= sum;
-        }
-        
-        return kernel;
-    }
-    
+   
     private static FloatProcessor smoothImage(FloatProcessor fp, float[] kernel) {
     	FloatProcessor fpSmoothed = (FloatProcessor) fp.duplicate();
-    	Convolver conv = new Convolver();
-    	conv.convolve(fpSmoothed, kernel, 3, 3);
-    	return fpSmoothed;
+		if (kernel == null) {
+			GradientMapAnalyzer.applyDefaultSmoothing(fpSmoothed);
+		} else {
+			new Convolver().convolve(fpSmoothed, kernel, 3, 3);
+		}
+		return fpSmoothed;
     }
     
     /**
-     * Computes smoothed version of image for visualization purposes.
-     * Public wrapper around internal smoothing logic.
-     *
-     * @param ip source image processor
-     * @return flattened array of smoothed pixel values
-     */
-    public static float[] computeSmoothedImage(ImageProcessor ip) {
-        FloatProcessor fp = ip.convertToFloatProcessor();
-        float[] kernel = getDefaultSmoothingKernel();
-        
-        return (float[]) smoothImage(fp, kernel).getPixels();
-    }
-    
-    /**
-     * Creates linearly spaced array
-     */
+	 * Creates a linearly spaced array of {@code n} values from {@code start} to {@code end} (inclusive).
+	 */
     private static double[] linspace(double start, double end, int n) {
         double[] result = new double[n];
         double step = (end - start) / (n - 1);
@@ -379,8 +342,8 @@ public class NoiseStatisticsAnalyzer {
     }
     
     /**
-     * Finds which bin a value belongs to
-     */
+	 * Returns the bin index for {@code value} within the given bin edges, or -1 if out of range.
+	 */
     private static int findBin(float value, double[] bins) {
     	if (value < bins[0] || value >= bins[bins.length - 1]) return -1;
         
@@ -417,8 +380,8 @@ public class NoiseStatisticsAnalyzer {
     }
     
     /**
-     * Finds peak intensity from histogram
-     */
+	 * Finds the intensity at the histogram mode (most frequent bin center) within the given range.
+	 */
     private static double findPeakIntensity(float[] data, double[] range, int nbins) {
         // Build histogram
         int[] hist = new int[nbins];

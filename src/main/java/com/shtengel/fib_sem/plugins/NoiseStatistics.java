@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
+import com.shtengel.fib_sem.core.GradientMapAnalyzer;
 import com.shtengel.fib_sem.core.NoiseStatisticsAnalyzer;
 import com.shtengel.fib_sem.data.NoiseStatisticsData;
 import com.shtengel.fib_sem.util.FigBuilder;
@@ -230,7 +231,10 @@ public class NoiseStatistics implements Command {
         double maxThreshold = rangeAnalysis[1];
         
         // Recompute smoothed image and gradients for visualization
-        float[] smoothed = NoiseStatisticsAnalyzer.computeSmoothedImage(ipToProcess);
+        FloatProcessor fpSmoothed = ipToProcess.convertToFloatProcessor();
+        fpSmoothed = (FloatProcessor) fpSmoothed.duplicate();
+        GradientMapAnalyzer.applyDefaultSmoothing(fpSmoothed);
+        float[] smoothed = (float[]) fpSmoothed.getPixels();
         float[] gradients = NoiseStatisticsAnalyzer.computeGradientMagnitudes(ipToProcess.convertToFloatProcessor());
         
         FloatProcessor fp = ipToProcess.convertToFloatProcessor();
