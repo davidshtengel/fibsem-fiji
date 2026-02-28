@@ -22,6 +22,10 @@ public class ThresholdData {
     public ThresholdData(double minInt, double maxInt) {
         this.minIntensity = minInt;
         this.maxIntensity = maxInt;
+		this.minThreshold = Double.NaN;
+		this.maxThreshold = Double.NaN;
+		this.pdf = null;
+		this.cdf = null;
     }
     
     /**
