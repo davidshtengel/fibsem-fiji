@@ -39,10 +39,10 @@ public class Thresholds implements Command {
     @Parameter(type = ItemIO.INPUT, required = false)
     private ImagePlus imp;
 
-    @Parameter(label = "Lower Threshold (%)", min = "0.0", max = "1.0")
+    @Parameter(label = "Lower CDF Threshold (fraction)", min = "0.0", max = "1.0")
     private double thrMin = 0.001;
     
-    @Parameter(label = "Upper Threshold (%)", min = "0.0", max = "1.0")
+    @Parameter(label = "Upper CDF Threshold (fraction)", min = "0.0", max = "1.0")
     private double thrMax = 0.001;
 
     @Parameter(label = "Number of bins", min = "2", max = "65536")
