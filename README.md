@@ -7,9 +7,9 @@ A Fiji/ImageJ plugin suite for quantitative analysis of Focused Ion Beam - Scann
 - **Read .dat Files** — Parse custom binary FIB-SEM data files with full
   header metadata, spatial/temporal calibration, and multi-channel support.
 - **Noise Statistics Analysis** — Characterize image noise via variance–mean
-  regression, estimating system gain and signal-to-noise ratios.
+  regression, estimating signal-to-noise ratios.
 - **Contrast Analysis** — Quantify contrast between material phases using
-  CDF-based peak identification on gradient-filtered intensity distributions.
+  PDF-based peak identification on gradient-filtered intensity distributions.
 - **Edge Transition Analysis** — Measure edge sharpness by detecting gradient
   peaks, extracting intensity profiles along gradient directions, and fitting
   a directional ellipse to characterize resolution anisotropy.
