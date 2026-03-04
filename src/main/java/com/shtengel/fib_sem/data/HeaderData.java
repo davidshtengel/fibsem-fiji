@@ -6,6 +6,9 @@ package com.shtengel.fib_sem.data;
  * Based on Shan Xu's binary format with 1024-byte header.
  */
 public class HeaderData {
+
+	// Default constructor
+	public HeaderData() {}
     
 	// File/format metadata
 	private long fileMagicNum;
@@ -13,20 +16,15 @@ public class HeaderData {
     private short fileType;
     private String machineID;
     private long fileLength;
-
     public long getFileMagicNum() { return fileMagicNum; }
-    public void setFileMagicNum(long fileMagicNum) { this.fileMagicNum = fileMagicNum; }
-
     public short getFileVersion() { return fileVersion; }
-    public void setFileVersion(short fileVersion) { this.fileVersion = fileVersion; }
-
     public short getFileType() { return fileType; }
-    public void setFileType(short fileType) { this.fileType = fileType; }
-
     public String getMachineID() { return machineID; }
-    public void setMachineID(String machineID) { this.machineID = machineID; }
-
     public long getFileLength() { return fileLength; }
+    public void setFileMagicNum(long fileMagicNum) { this.fileMagicNum = fileMagicNum; }
+    public void setFileVersion(short fileVersion) { this.fileVersion = fileVersion; }
+    public void setFileType(short fileType) { this.fileType = fileType; }
+    public void setMachineID(String machineID) { this.machineID = machineID; }
     public void setFileLength(long fileLength) { this.fileLength = fileLength; }
     
     // Acquisition timing/control
@@ -35,20 +33,15 @@ public class HeaderData {
     private int restartFlag;
     private int stageMove;
     private byte mode;	// 0=SEM, 1=FIB, 2=Milling, etc.
-
     public String getSWDate() { return swDate; }
-    public void setSWDate(String swDate) { this.swDate = swDate; }
-
     public double getTimeStep() { return timeStep; }
-    public void setTimeStep(double timeStep) { this.timeStep = timeStep; }
-
     public int getRestartFlag() { return restartFlag; }
-    public void setRestartFlag(int restartFlag) { this.restartFlag = restartFlag; }
-
     public int getStageMove() { return stageMove; }
-    public void setStageMove(int stageMove) { this.stageMove = stageMove; }
-
     public byte getMode() { return mode; }
+    public void setSWDate(String swDate) { this.swDate = swDate; }
+    public void setTimeStep(double timeStep) { this.timeStep = timeStep; }
+    public void setRestartFlag(int restartFlag) { this.restartFlag = restartFlag; }
+    public void setStageMove(int stageMove) { this.stageMove = stageMove; }
     public void setMode(byte mode) { this.mode = mode; }
 	
     // Channel/signal configuration
@@ -57,19 +50,10 @@ public class HeaderData {
     private boolean saveOversamples;
     private int decimatingFactor;
     private float[][] scaling;
-
     public int getChannelCount() { return channelCount; }
-    public void setChannelCount(int channelCount) { this.channelCount = channelCount; }
-
     public int getEightBit() { return eightBit; }
-    public void setEightBit(int eightBit) { this.eightBit = eightBit; }
-
     public boolean isSaveOversamples() { return saveOversamples; }
-    public void setSaveOversamples(boolean saveOversamples) { this.saveOversamples = saveOversamples; }
-
     public int getDecimatingFactor() { return decimatingFactor; }
-    public void setDecimatingFactor(int decimatingFactor) { this.decimatingFactor = decimatingFactor; }
-
     public float[][] getScaling() {
         if (scaling == null) return null;
         float[][] copy = new float[scaling.length][];
@@ -78,10 +62,11 @@ public class HeaderData {
         }
         return copy;
     }
-
-    public void setScaling(float[][] scaling) {
-        this.scaling = scaling;
-    }
+    public void setChannelCount(int channelCount) { this.channelCount = channelCount; }
+    public void setEightBit(int eightBit) { this.eightBit = eightBit; }
+    public void setSaveOversamples(boolean saveOversamples) { this.saveOversamples = saveOversamples; }
+    public void setDecimatingFactor(int decimatingFactor) { this.decimatingFactor = decimatingFactor; }
+    public void setScaling(float[][] scaling) { this.scaling = scaling; }
     
     // Scan geometry/resolution
     private int firstPixelX;
@@ -109,9 +94,19 @@ public class HeaderData {
     public void setDetMin(double detMin) { this.detMin = detMin; }
     public void setDetMax(double detMax) { this.detMax = detMax; }
     
+	public int getBitDepth() { return (eightBit == 1) ? 8 : 16; }
+    public long getDataSize() {
+        long elementsPerChannel = (long) xResolution * yResolution;
+        long totalElements = elementsPerChannel * channelCount;
+        if (saveOversamples) {
+            totalElements *= oversampling;
+        }
+        return totalElements * ((eightBit == 1 )? 1 : 2);
+    }
+
     // Scan timing
     private int zeissScanSpeed;
-    private double scanRate;
+    private double scanRate = -1;
     private double framelineRampdown;
     public int getZeissScanSpeed() { return zeissScanSpeed; }
     public double getScanRate() { return scanRate; }
@@ -146,7 +141,7 @@ public class HeaderData {
     private double eht;
     private int semAperture;
     private boolean highCurrent;
-    private double semCurrent;
+    private double semCurrent = -1;
     private double semRotation;
     public double getMagnification() { return magnification; }
     public double getPixelSize() { return pixelSize; }
@@ -165,6 +160,20 @@ public class HeaderData {
     public void setSEMCurrent(double semCurrent) { this.semCurrent = semCurrent; }
     public void setSEMRotation(double semRotation) { this.semRotation = semRotation; }
     
+	// Computed parameter
+	public final double ELEMENTARY_CHARGE_COULOMBS = 1.602176634e-19; 
+	public double pixelDose;
+	public double getPixelDose() { 
+		if (pixelDose == 0.0 && semCurrent != -1 && scanRate != -1) {
+			computePixelDose();
+		}
+		return pixelDose; 
+	}
+	public void computePixelDose() {
+		double pixelDose = semCurrent / scanRate / ELEMENTARY_CHARGE_COULOMBS;
+		this.pixelDose = pixelDose;
+	}
+
     // SEM alignment, shift, and stigmation
     private float semAlignX;
     private float semAlignY;
@@ -244,29 +253,25 @@ public class HeaderData {
 
     private long fibSliceNum;
     private float fibFOV;           // (um)
-
     public void setFIBSliceNum(long fibSliceNum) { this.fibSliceNum = fibSliceNum; }
 	public void setFIBFOV(float fibFOV) { this.fibFOV = fibFOV; }
     
     // Milling geometry and timing
     private long millingXResolution;
     private long millingYResolution;
-	public void setMillingXResolution(long millingXResolution) { this.millingXResolution = millingXResolution; }
-	public void setMillingYResolution(long millingYResolution) { this.millingYResolution = millingYResolution; }
-
     private float millingXSize;     // in um
     private float millingYSize;    
-    public void setMillingXSize(float millingXSize) { this.millingXSize = millingXSize; }
-    public void setMillingYSize(float millingYSize) { this.millingYSize = millingYSize; }
-
     private float millingULAngle;
     private float millingURAngle;
-    public void setMillingULAngle(float millingULAngle) { this.millingULAngle = millingULAngle; }
-    public void setMillingURAngle(float millingURAngle) { this.millingURAngle = millingURAngle; }
-    
     private float millingLineTime;
     private float millingLinesPerImage;
     private float millingYVoltage;
+	public void setMillingXResolution(long millingXResolution) { this.millingXResolution = millingXResolution; }
+	public void setMillingYResolution(long millingYResolution) { this.millingYResolution = millingYResolution; }
+    public void setMillingXSize(float millingXSize) { this.millingXSize = millingXSize; }
+    public void setMillingYSize(float millingYSize) { this.millingYSize = millingYSize; }
+    public void setMillingULAngle(float millingULAngle) { this.millingULAngle = millingULAngle; }
+    public void setMillingURAngle(float millingURAngle) { this.millingURAngle = millingURAngle; }    
     public void setMillingLineTime(float millingLineTime) { this.millingLineTime = millingLineTime; }
     public void setMillingLinesPerImage(float millingLinesPerImage) { this.millingLinesPerImage = millingLinesPerImage; }	
     public void setMillingYVoltage(float millingYVoltage) { this.millingYVoltage = millingYVoltage; }
@@ -276,43 +281,9 @@ public class HeaderData {
     private byte millingPIDMeasured;
     private float millingPIDTarget;
     private float millingPIDTargetSlope;
-    
     private float millingPID_P;
     private float millingPID_I;
     private float millingPID_D;
-    
-    // Electrical & beam current monitoring
-    private float semSpecimenCurrent;
-    private float fibSpecimenCurrent;
-    private float faradayCupCurrent;
-    
-    private float beamDump1Current;
-    private float beamDump2Current;
-    private float millingCurrent;
-    
-    // Focus/indexing
-    private float focusIndex;
-        
-    public HeaderData() {
-        // Default constructor
-    }
-    
-    
-    public int getBitDepth() { return (eightBit == 1) ? 8 : 16; }
-
-    public long getDataSize() {
-        long elementsPerChannel = (long) xResolution * yResolution;
-        long totalElements = elementsPerChannel * channelCount;
-        if (saveOversamples) {
-            totalElements *= oversampling;
-        }
-        return totalElements * ((eightBit == 1 )? 1 : 2);
-    }
-
-	public void setFIBSpecimenCurrent(float fibSpecimenCurrent) { this.fibSpecimenCurrent = fibSpecimenCurrent; }
-
-
-	// Milling PID
 	public void setMillingPID(boolean millingPID) { this.millingPID = millingPID; }
 	public void setMillingPIDMeasured(byte millingPIDMeasured) { this.millingPIDMeasured = millingPIDMeasured; }
 	public void setMillingPIDTarget(float millingPIDTarget) { this.millingPIDTarget = millingPIDTarget; }
@@ -320,16 +291,22 @@ public class HeaderData {
 	public void setMillingPIDP(float millingPID_P) { this.millingPID_P = millingPID_P; }
 	public void setMillingPIDI(float millingPID_I) { this.millingPID_I = millingPID_I; }
 	public void setMillingPIDD(float millingPID_D) { this.millingPID_D = millingPID_D; }
-
+    
+    // Electrical & beam current monitoring
+    private float semSpecimenCurrent;
+    private float fibSpecimenCurrent;
+    private float faradayCupCurrent;
+    private float beamDump1Current;
+    private float beamDump2Current;
+    private float millingCurrent;
+    private float focusIndex;
+	public void setSEMSpecimenCurrent(float semSpecimenCurrent) { this.semSpecimenCurrent = semSpecimenCurrent; }
+	public void setFIBSpecimenCurrent(float fibSpecimenCurrent) { this.fibSpecimenCurrent = fibSpecimenCurrent; }
 	public void setFaradayCupCurrent(float faradayCupCurrent) { this.faradayCupCurrent = faradayCupCurrent; }
 	public void setBeamDump1Current(float beamDump1Current) { this.beamDump1Current = beamDump1Current; }
 	public void setBeamDump2Current(float beamDump2Current) { this.beamDump2Current = beamDump2Current; }
 	public void setMillingCurrent(float millingCurrent) { this.millingCurrent = millingCurrent; }
-	
 	public void setFocusIndex(float focusIndex) { this.focusIndex = focusIndex; }
-		
-	public void setSEMSpecimenCurrent(float semSpecimenCurrent) { this.semSpecimenCurrent = semSpecimenCurrent; }
-    
 	
 	@Override
 	public String toString() {
@@ -344,7 +321,10 @@ public class HeaderData {
 	    info.append("Oversampling: ").append(oversampling).append("\n");
 	    info.append("Scan Rate: ").append(String.format("%.3f", scanRate / 1e6)).append(" MHz\n");
 	    info.append("Time Step: ").append(String.format("%.6f", timeStep)).append(" s\n\n");
-
+		
+		info.append("=== Computed Properties ===\n");
+		info.append("Pixel Dose= ").append(String.format("%.3f", getPixelDose())).append("\n\n");
+		
 	    // Scaling factors
 	    if (scaling != null && scaling.length > 0) {
 	        info.append("=== Scaling Factors ===\n");
