@@ -3,6 +3,8 @@ package com.shtengel.fib_sem.core;
 import java.util.ArrayList;
 
 import com.shtengel.fib_sem.data.*;
+import com.shtengel.fib_sem.util.DoubleGaussianFitter;
+
 import ij.process.*;
 
 /**
@@ -15,28 +17,108 @@ public class ContrastAnalyzer {
 	private ContrastAnalyzer() {}
 
 	/**
-	 * Computes contrast between high- and low-intensity phases of a FIB-SEM image.
+	 * Computes contrast with automatically detected bimodal peaks.
 	 *
 	 * <p>Applies gradient filtering to retain low-texture pixels, smooths,
-	 * then identifies intensity peaks via CDF thresholds to derive the contrast metric.</p>
+	 * then fits a double-Gaussian to the resulting PDF to derive I_low and I_high
+	 * from the two mode centres.</p>
 	 *
 	 * @param ip                source image processor (ROI is respected if set)
 	 * @param darkCount         dark count I0 (intensity at zero variance)
 	 * @param gradientThreshold fraction of pixels to retain by gradient magnitude (0–1)
-	 * @param thrMinContrast    lower CDF quantile for low-intensity peak
-	 * @param thrMaxContrast    upper CDF quantile for high-intensity peak
-	 * @param nbins             number of histogram bins for threshold computation
+	 * @param nbins             number of histogram bins
+	 * @return contrast analysis results (including the fitted double-Gaussian)
+	 * @see ContrastData
+	 */
+	public static ContrastData computeContrastAuto(ImageProcessor ip,
+		double darkCount,
+		double gradientThreshold,
+		int nbins) {
+
+		double[][] subset = extractSubset(ip, gradientThreshold);
+		double[] values = subset[0];
+		int totalPixels = (int) subset[1][0];
+		int subsetPixels = (int) subset[2][0];
+
+		// Build histogram, PDF, and CDF
+		ThresholdData thresholds = ThresholdAnalyzer.computeThresholds(
+			values, 0.001, 0.001, nbins
+		);
+		
+		// Compute bin centres for the fitter
+		double[] pdf = thresholds.getPDF();
+		double minInt = thresholds.getMinIntensity();
+		double maxInt = thresholds.getMaxIntensity();
+		int nBins = pdf.length;
+		double binWidth = (maxInt - minInt) / nBins;
+		double[] binCenters = new double[nBins];
+		for (int i = 0; i < nBins; i++) {
+			binCenters[i] = minInt + (i + 0.5) * binWidth;
+		}
+
+		// Fit double-Gaussian → I_low = μ1, I_high = μ2
+		DoubleGaussianFitter.FitResult fit = DoubleGaussianFitter.fit(binCenters, pdf);
+
+		double iLow  = fit.getMu1();
+		double iHigh = fit.getMu2();
+
+		return new ContrastData(iLow, iHigh, darkCount,
+			gradientThreshold,
+			totalPixels, subsetPixels,
+			values,
+			true,   // autoMode
+			nbins,
+			thresholds,
+			fit
+		);
+	}
+
+	/**
+	 * Computes contrast using user-supplied I_low and I_high values.
+	 *
+	 * <p>Applies gradient filtering and smoothing as usual, but uses the provided
+	 * intensity values directly rather than fitting peaks.</p>
+	 *
+	 * @param ip                source image processor (ROI is respected if set)
+	 * @param darkCount         dark count I0 (intensity at zero variance)
+	 * @param gradientThreshold fraction of pixels to retain by gradient magnitude (0–1)
+	 * @param iLow              user-specified lower intensity peak value
+	 * @param iHigh             user-specified upper intensity peak value
+	 * @param nbins             number of histogram bins (used for visualization)
 	 * @return contrast analysis results
 	 * @see ContrastData
 	 */
-	public static ContrastData computeContrast(ImageProcessor ip,
+	public static ContrastData computeContrastManual(ImageProcessor ip,
 		double darkCount,
 		double gradientThreshold,
-		double thrMinContrast,
-		double thrMaxContrast,
+		double iLow,
+		double iHigh,
 		int nbins) {
 
-		// Work on the ROI-cropped region, if present
+		double[][] subset = extractSubset(ip, gradientThreshold);
+		double[] values = subset[0];
+		int totalPixels = (int) subset[1][0];
+		int subsetPixels = (int) subset[2][0];
+
+		ThresholdData thresholds = ThresholdAnalyzer.computeThresholds(
+			values, 0.001, 0.001, nbins
+		);
+
+		return new ContrastData(iLow, iHigh, darkCount,
+			gradientThreshold,
+			totalPixels, subsetPixels,
+			values,
+			false,  // manual mode
+			nbins,
+			thresholds,
+			null    // no fit in manual mode
+		);
+	}
+
+	/**
+	 * Extracts the gradient-filtered, smoothed pixel subset from the image.
+	 */
+	private static double[][] extractSubset(ImageProcessor ip, double gradientThreshold) {
 		ImageProcessor cropped = (ip.getRoi() != null) ? ip.crop() : ip;
 		FloatProcessor fp = cropped.convertToFloatProcessor();
 		int width = cropped.getWidth();
@@ -44,19 +126,21 @@ public class ContrastAnalyzer {
 		int totalPixels = width * height;
 
 		// Compute gradient magnitudes
-		float[][] components = GradientMapAnalyzer.computeGradientComponents(fp.duplicate().convertToFloatProcessor(), false);
-		float[] gradMag = GradientMapAnalyzer.computeGradientMagnitude(components[0], components[1], fp, false);
+		float[][] components = GradientMapAnalyzer.computeGradientComponents(
+			fp.duplicate().convertToFloatProcessor(), false);
+		float[] gradMag = GradientMapAnalyzer.computeGradientMagnitude(
+			components[0], components[1], fp, false);
 
 		// Determine gradient cutoff (from CDF)
 		float gradientCutoff = computeGradientCutoff(gradMag, width, height, gradientThreshold);
 
-		// Smooth image using the standard kernel
+		// Smooth image
 		FloatProcessor smoothedFp = fp.duplicate().convertToFloatProcessor();
 		GradientMapAnalyzer.applyDefaultSmoothing(smoothedFp);
 		float[] smoothed = (float[]) smoothedFp.getPixels();
 
-		// Extract subset of smoothed pixels where gradient < cutoff (excluding the 1-pixel border)
-		ArrayList<Double> subsetList = new ArrayList<>();  
+		// Extract subset where gradient < cutoff (excluding 1-pixel border)
+		ArrayList<Double> subsetList = new ArrayList<>();
 		for (int y = 1; y < height - 1; y++) {
 			for (int x = 1; x < width - 1; x++) {
 				int idx = y * width + x;
@@ -65,26 +149,8 @@ public class ContrastAnalyzer {
 				}
 			}
 		}
-		double[] subset = toArray(subsetList);
-
-		// Compute CDF-based thresholds on the subset to find I_low and I_high
-		ThresholdData thresholds = ThresholdAnalyzer.computeThresholds(
-			subset, thrMinContrast, thrMaxContrast, nbins
-		);
-		double iLow = thresholds.getMinThreshold();
-		double iHigh = thresholds.getMaxThreshold();
-
-		return new ContrastData(iLow, 
-			iHigh,
-			darkCount,
-			gradientThreshold,
-			totalPixels,
-			subsetList.size(),
-			subset,
-			thrMinContrast,
-			thrMaxContrast,
-			thresholds
-		);
+		double[] values = toArray(subsetList); 
+		return new double[][] {values, {totalPixels}, {subsetList.size()}};
 	}
 
 	/**

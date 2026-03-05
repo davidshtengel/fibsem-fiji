@@ -12,6 +12,7 @@ import org.scijava.plugin.Plugin;
 import com.shtengel.fib_sem.core.ContrastAnalyzer;
 import com.shtengel.fib_sem.data.ContrastData;
 import com.shtengel.fib_sem.data.ThresholdData;
+import com.shtengel.fib_sem.util.DoubleGaussianFitter;
 import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
 import com.shtengel.fib_sem.util.ParamPersister;
@@ -43,9 +44,11 @@ public class Contrast implements Command {
 	private boolean ranSNR;
 	private double i0;
 	private double gradientThreshold;
-	private double thrMinContrast;
-	private double thrMaxContrast;
+	private boolean autoMode;
+	private double iLow;
+	private double iHigh;
 	private int nbins;
+	private boolean showComponents;
 	private boolean saveFigs;
 	private ImagePlus imp;
 
@@ -77,11 +80,17 @@ public class Contrast implements Command {
             IJ.log("Processing entire image (no ROI selected)");
         }
 
-		// Compute contrast
-        ContrastData result = ContrastAnalyzer.computeContrast(
-            ip, i0, gradientThreshold,
-            thrMinContrast, thrMaxContrast, nbins
-        );
+		// Compute contrast (auto or manual)
+		ContrastData result;
+		if (autoMode) {
+			result = ContrastAnalyzer.computeContrastAuto(
+				ip, i0, gradientThreshold, nbins
+			);
+		} else {
+			result = ContrastAnalyzer.computeContrastManual(
+				ip, i0, gradientThreshold, iLow, iHigh, nbins
+			);
+		}
 
 		// Log results
         logResults(result);
@@ -135,11 +144,36 @@ public class Contrast implements Command {
                      + "are retained for analysis. E.g. 0.75 keeps 75% of pixels with lowest local gradients.");
         gd.addNumericField("Gradient threshold", gradientThreshold, 2, 6, "");
 
-        gd.addMessage("CDF thresholds for identifying the two intensity peaks.\n"
-                     + "Adjust these to coincide with the peaks of low- and high- intensity modes in the PDF.");
-        gd.addNumericField("Lower threshold (I_low)", thrMinContrast, 3, 6, "");
-        gd.addNumericField("Upper threshold (I_high)", thrMaxContrast, 3, 6, "");
-        gd.addNumericField("Number of bins", nbins, 0, 6, "");
+        gd.addMessage("Peak identification for I_low and I_high:");
+		gd.addCheckbox("Determine I_low and I_high automatically (double-Gaussian fit)", autoMode);
+		gd.addCheckbox("Show individual Gaussian components on plot", showComponents);
+
+		gd.addNumericField("I_low (lower intensity peak)", iLow, 2, 10, "");
+		gd.addNumericField("I_high (upper intensity peak)", iHigh, 2, 10, "");
+		gd.addNumericField("Number of bins", nbins, 0, 6, "");
+
+		@SuppressWarnings("unchecked")
+		Vector<Checkbox> allCheckboxes = gd.getCheckboxes();
+		@SuppressWarnings("unchecked")
+		Vector<TextField> allNumericFields = gd.getNumericFields();
+		int nCheckboxes = allCheckboxes.size();
+		Checkbox autoCheckbox = allCheckboxes.get(nCheckboxes - 2);
+		Checkbox componentsCheckbox = allCheckboxes.get(nCheckboxes - 1);
+
+		int nFields = allNumericFields.size();
+		TextField iLowField  = allNumericFields.get(nFields - 3);
+		TextField iHighField = allNumericFields.get(nFields - 2);
+		iLowField.setEnabled(!autoMode);
+		iHighField.setEnabled(!autoMode);
+		componentsCheckbox.setEnabled(autoMode);
+
+		gd.addDialogListener((dialog, e) -> {
+			boolean auto = autoCheckbox.getState();
+			iLowField.setEnabled(!auto);
+			iHighField.setEnabled(!auto);
+			componentsCheckbox.setEnabled(auto);
+			return true;
+		});
 
         gd.addMessage("Export:");
         gd.addCheckbox("Save plot as titled figure", saveFigs);
@@ -157,7 +191,7 @@ public class Contrast implements Command {
 			i0 = gd.getNextNumber();
 
 			if (runSNR) {
-				IJ.run("Noise Statistics (Single Image)");  // blocks until plugin's dialog completes
+				IJ.run("Noise Statistics Analysis (Single Image)");  // blocks until plugin's dialog completes
 				getAllPersistedParams();      // re-read i0 from image properties
 				if (!ranSNR) {
 					IJ.error("Contrast", "SNR analysis did not complete. Please enter I0 manually.");
@@ -166,8 +200,10 @@ public class Contrast implements Command {
 			}
 		}
         gradientThreshold = gd.getNextNumber();
-        thrMinContrast = gd.getNextNumber();
-        thrMaxContrast = gd.getNextNumber();
+        autoMode = gd.getNextBoolean();
+        showComponents = gd.getNextBoolean();
+		iLow  = gd.getNextNumber();
+		iHigh = gd.getNextNumber();
         nbins = (int) gd.getNextNumber();
         saveFigs = gd.getNextBoolean();
 
@@ -176,10 +212,16 @@ public class Contrast implements Command {
             IJ.error("Invalid gradient threshold. Must be between 0 and 1.");
             return false;
         }
-        if (thrMinContrast < 0 || thrMinContrast > 1 || thrMaxContrast < 0 || thrMaxContrast > 1) {
-            IJ.error("Invalid CDF thresholds. Must be between 0 and 1.");
-            return false;
-        }
+        if (!autoMode) {
+			if (Double.isNaN(iLow) || Double.isNaN(iHigh)) {
+				IJ.error("I_low and I_high must be valid numbers.");
+				return false;
+			}
+			if (iLow >= iHigh) {
+				IJ.error("I_low must be less than I_high.");
+				return false;
+			}
+		}
         if (nbins < 10 || nbins > 10000) {
             IJ.error("Number of bins must be between 10 and 10000.");
             return false;
@@ -230,11 +272,46 @@ public class Contrast implements Command {
 
         // PDF curve
         plot.setColor(Color.BLUE);
+		plot.setLineWidth(1.5f);
         plot.addPoints(binCenters, pdf, Plot.LINE);
         legend.append("PDF\n");
 
+        // Fitted double-gaussian curve (auto mode only)
+        if (result.isAutoMode() && result.getGaussianFit() != null) {
+			plot.setLineWidth(0.75f);
+            DoubleGaussianFitter.FitResult fit = result.getGaussianFit();
+            double[] fitY = new double[nBins];
+            for (int i = 0; i < nBins; i++) {
+                fitY[i] = fit.evaluate(binCenters[i]);
+            }
+            plot.setColor(Color.MAGENTA);
+            plot.addPoints(binCenters, fitY, Plot.LINE);
+            legend.append(String.format("Double-Gaussian Fit (R\u00B2=%.4f)\n", fit.rSquared()));
+
+            // Individual Gaussian components
+            if (showComponents) {
+                double a1 = fit.getA1(), mu1 = fit.getMu1(), s1 = fit.getSigma1();
+                double a2 = fit.getA2(), mu2 = fit.getMu2(), s2 = fit.getSigma2();
+                double[] g1 = new double[nBins];
+                double[] g2 = new double[nBins];
+                for (int i = 0; i < nBins; i++) {
+                    double dx1 = binCenters[i] - mu1;
+                    double dx2 = binCenters[i] - mu2;
+                    g1[i] = a1 * Math.exp(-0.5 * dx1 * dx1 / (s1 * s1));
+                    g2[i] = a2 * Math.exp(-0.5 * dx2 * dx2 / (s2 * s2));
+                }
+                plot.setColor(Color.RED);
+                plot.addPoints(binCenters, g1, Plot.LINE);
+                legend.append(String.format("Gaussian 1 (\u03BC=%.2f)\n", mu1));
+                plot.setColor(Color.CYAN);
+                plot.addPoints(binCenters, g2, Plot.LINE);
+                legend.append(String.format("Gaussian 2 (\u03BC=%.2f)\n", mu2));
+            }
+        }
+
         // Vertical threshold lines
-        plot.setColor(Color.RED);
+		plot.setLineWidth(1);
+		plot.setColor(Color.RED);
         plot.drawDottedLine(iLow, 0, iLow, maxPdf, 1);
 		plot.addPoints(new double[] {iLow, iLow}, new double[] {0, maxPdf}, Plot.DOT);
 		legend.append(String.format("I_low = %.2f\n", iLow));
@@ -245,11 +322,12 @@ public class Contrast implements Command {
 
         // Annotations
         plot.setColor(Color.BLACK);
-		plot.addLabel(0.05, 0.25, String.format("I0 = %.2f\nContrast = %.3f", i0, contrast));
+		plot.addLabel(0.7, 0.25, String.format("I0 = %.2f\nContrast = %.3f", i0, contrast));
 
         plot.addLegend(legend.toString());
+		plot.setFrameSize(800,600);
         plot.setLimits(minInt, maxInt, 0, maxPdf * 1.05);
-
+		plot.setLineWidth(1.5f);
         return plot;
     }
 
@@ -265,11 +343,9 @@ public class Contrast implements Command {
              + " / " + result.getTotalPixels()
              + String.format(" (%.1f%%)", 100.0 * result.getSubsetPixels() / result.getTotalPixels()));
         IJ.log("");
-        IJ.log("I_low (CDF = " + String.format("%.3f", result.getThrMinContrast()) + "): "
-             + String.format("%.2f", result.getILow()));
-        IJ.log("I_high (CDF = " + String.format("%.3f", 1.0 - result.getThrMaxContrast()) + "): "
-             + String.format("%.2f", result.getIHigh()));
-        IJ.log("I_mean: " + String.format("%.2f", result.getIMean()));
+        IJ.log("I_low:  " + String.format("%.2f", result.getILow()));
+		IJ.log("I_high: " + String.format("%.2f", result.getIHigh()));
+		IJ.log("I_mean: " + String.format("%.2f", result.getIMean()));
         IJ.log("I0 (dark count): " + String.format("%.2f", result.getI0()));
         IJ.log("");
         IJ.log("Contrast = " + String.format("%.3f", result.getContrast()));
@@ -278,10 +354,11 @@ public class Contrast implements Command {
 	private void getAllPersistedParams() {
 		ranSNR = ParamPersister.get(imp, "C_ranSNR", false);
 		i0 = ParamPersister.get(imp, "C_i0", 0.0);
-        gradientThreshold = ParamPersister.get(imp, "C_gradientThreshold", 0.50);
-        thrMinContrast = ParamPersister.get(imp, "C_thrMinContrast", 0.25);
-        thrMaxContrast = ParamPersister.get(imp, "C_thrMaxContrast", 0.25);
-        nbins = ParamPersister.get(imp, "C_nbins", 256);
+        gradientThreshold = ParamPersister.get(imp, "C_gradientThreshold", 0.25);
+        autoMode = ParamPersister.get(imp, "C_autoMode", true);
+		iLow  = ParamPersister.get(imp, "C_iLow", 0.0);
+		iHigh = ParamPersister.get(imp, "C_iHigh", 0.0);
+		nbins = ParamPersister.get(imp, "C_nbins", 256);
         saveFigs = ParamPersister.get(imp, 	"C_saveFigs", false);
 	}
 
@@ -289,9 +366,10 @@ public class Contrast implements Command {
 		ParamPersister.set(imp, "C_ranSNR", ranSNR);
 		ParamPersister.set(imp, "C_i0", i0);
         ParamPersister.set(imp, "C_gradientThreshold", gradientThreshold);
-        ParamPersister.set(imp, "C_thrMinContrast", thrMinContrast);
-        ParamPersister.set(imp, "C_thrMaxContrast", thrMaxContrast);
-        ParamPersister.set(imp, "C_nbins", nbins);
+        ParamPersister.set(imp, "C_autoMode", autoMode);
+		ParamPersister.set(imp, "C_iLow", iLow);
+		ParamPersister.set(imp, "C_iHigh", iHigh);
+		ParamPersister.set(imp, "C_nbins", nbins);
         ParamPersister.set(imp, "C_saveFigs", saveFigs);
         logParams();
 	}
@@ -300,9 +378,12 @@ public class Contrast implements Command {
         LinkedHashMap<String, Object> params = new LinkedHashMap<>();
         params.put("Dark count (I0)", i0);
         params.put("Gradient threshold", gradientThreshold);
-        params.put("Lower CDF threshold", thrMinContrast);
-        params.put("Upper CDF threshold", thrMaxContrast);
-        params.put("Number of bins", nbins);
+        params.put("Auto mode", autoMode);
+		if (!autoMode) {
+			params.put("I_low (manual)", iLow);
+			params.put("I_high (manual)", iHigh);
+		}
+		params.put("Number of bins", nbins);
         params.put("Save figures", saveFigs);
         ParamPersister.logParams("Parameters - Contrast Analysis", params);
     }

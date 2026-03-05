@@ -1,5 +1,7 @@
 package com.shtengel.fib_sem.data;
 
+import com.shtengel.fib_sem.util.DoubleGaussianFitter;
+
 /**
  * Data container for image contrast analysis results.
  *
@@ -17,6 +19,13 @@ package com.shtengel.fib_sem.data;
  * where {@code I_mean = (I_high + I_low) / 2} and {@code I0} is the dark count
  * (intensity at zero signal).
  * </p>
+ * 
+ * <p>
+ * In automatic mode, I_low and I_high are the fitted means (μ1, μ2) of a
+ * double-Gaussian model; the full fit result is available via
+ * {@link #getGaussianFit()}.
+ * In manual mode, I_low and I_high are user-supplied values.
+ * </p>
  *
  * @see com.shtengel.fib_sem.core.ContrastAnalyzer
  */
@@ -31,10 +40,10 @@ public class ContrastData {
     private final int totalPixels;
     private final int subsetPixels;
     private final double[] smoothedSubset;
-    private final double thrMinContrast;
-    private final double thrMaxContrast;
+	private final boolean autoMode;
+	private final int nbins;
 	private final ThresholdData thresholdData;
-
+	private final DoubleGaussianFitter.FitResult gaussianFit;
 	/**
      * Constructs a new {@code ContrastData} instance.
      *
@@ -45,29 +54,32 @@ public class ContrastData {
      * @param totalPixels       total number of pixels in the (ROI-cropped) image
      * @param subsetPixels      number of pixels retained after gradient filtering
      * @param smoothedSubset    the filtered subset of smoothed pixel values
-     * @param thrMinContrast    lower CDF threshold used for peak identification
-     * @param thrMaxContrast    upper CDF threshold used for peak identification
-     * @param thresholdData     the underlying threshold analysis (histogram, PDF, CDF)
-     */
+	 * @param autoMode          {@code true} if peaks were detected via double-Gaussian fit
+	 * @param nbins             number of histogram bins used
+	 * @param thresholdData     the underlying threshold analysis (histogram, PDF, CDF)
+	 * @param gaussianFit       the double-Gaussian fit result, or {@code null} for manual mode
+	 */
 	public ContrastData(double iLow, double iHigh, double i0,
-                        double gradientThreshold,
-                        int totalPixels, int subsetPixels,
-                        double[] smoothedSubset,
-                        double thrMinContrast, double thrMaxContrast,
-					ThresholdData thresholdData) {
-        this.iLow = iLow;
-        this.iHigh = iHigh;
-        this.iMean = (iHigh + iLow) / 2.0;
-        this.i0 = i0;
-        this.contrast = (iHigh - iLow) / (this.iMean - i0);
-        this.gradientThreshold = gradientThreshold;
-        this.totalPixels = totalPixels;
-        this.subsetPixels = subsetPixels;
-        this.smoothedSubset = smoothedSubset;
-        this.thrMinContrast = thrMinContrast;
-        this.thrMaxContrast = thrMaxContrast;
+						double gradientThreshold,
+						int totalPixels, int subsetPixels,
+						double[] smoothedSubset,
+						boolean autoMode, int nbins,
+						ThresholdData thresholdData,
+						DoubleGaussianFitter.FitResult gaussianFit) {
+		this.iLow = iLow;
+		this.iHigh = iHigh;
+		this.iMean = (iHigh + iLow) / 2.0;
+		this.i0 = i0;
+		this.contrast = (iHigh - iLow) / (this.iMean - i0);
+		this.gradientThreshold = gradientThreshold;
+		this.totalPixels = totalPixels;
+		this.subsetPixels = subsetPixels;
+		this.smoothedSubset = smoothedSubset;
+		this.autoMode = autoMode;
+		this.nbins = nbins;
 		this.thresholdData = thresholdData;
-    }
+		this.gaussianFit = gaussianFit;
+	}
 
     public double getILow() { return iLow; }
     public double getIHigh() { return iHigh; }
@@ -81,9 +93,18 @@ public class ContrastData {
     public int getSubsetPixels() { return subsetPixels; }
     public double[] getSmoothedSubset() { return smoothedSubset; }
 
-    public double getThrMinContrast() { return thrMinContrast; }
-    public double getThrMaxContrast() { return thrMaxContrast; }
+	/** Returns {@code true} if I_low and I_high were detected via double-Gaussian fit. */
+	public boolean isAutoMode() { return autoMode; }
 
-	/** Returns the underlying threshold analysis (histogram, PDF, CDF). */
-    public ThresholdData getThresholdData() { return thresholdData; }
+	public int getNbins() { return nbins; }
+	
+	public ThresholdData getThresholdData() { return thresholdData; }
+	
+	/**
+	 * Returns the double-Gaussian fit result, or {@code null} if manual mode was used.
+	 *
+	 * <p>When non-null, the fit parameters are {@code [A1, μ1, σ1, A2, μ2, σ2]}
+	 * with μ1 = I_low and μ2 = I_high.</p>
+	 */
+	public DoubleGaussianFitter.FitResult getGaussianFit() { return gaussianFit; }
 }
