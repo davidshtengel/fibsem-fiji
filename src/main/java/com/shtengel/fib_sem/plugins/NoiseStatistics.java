@@ -41,7 +41,7 @@ import ij.process.ImageProcessor;
  *   <li>Bins the data by intensity and plots variance vs. mean</li>
  *   <li>Performs linear regression with two models:
  *     <ul>
- *       <li><b>Free fit (SNR):</b> var = slope × mean + intercept</li>
+ *       <li><b>Linear fit (SNR):</b> var = slope × mean + intercept</li>
  *       <li><b>Dark count fit (SNR1):</b> var = slope × (mean - darkCount)</li>
  *     </ul>
  *   </li>
@@ -125,8 +125,11 @@ public class NoiseStatistics implements Command {
 
 		// Persist computed I0 for contrast calculation
 		double i0 = result.getI0();
+		double[] rangeAnalysis = result.getRangeAnalysis();
 		ParamPersister.set(imp, "C_ranSNR", true);
 		ParamPersister.set(imp, "C_i0", i0);
+		ParamPersister.set(imp, "C_iLow", rangeAnalysis[0]);
+		ParamPersister.set(imp, "C_iHigh", rangeAnalysis[1]);
         
         Plot noiseDist = plotNoiseDistribution(result, darkCount, displaySNR, displaySNR1, imp.getTitle());
         
@@ -168,7 +171,7 @@ public class NoiseStatistics implements Command {
         
         gd.addMessage("This parameter is set to exclude the pixels with highest local gradient from the\nanalysis. Set to 1.0 to include all pixels. Set to 0.50 to only consider 50% of pixels\nwith the lowest local intensity gradient.");
         gd.addNumericField("Gradient threshold (upper)", gradientThreshold, 2, 6, "");
-        gd.addCheckbox("Show SNR0 (free fit)", displaySNR);
+        gd.addCheckbox("Show SNR0 (linear fit)", displaySNR);
         gd.addNumericField("User-defined Dark Count (intensity at zero variance)", darkCount, 1, 6, "");
         gd.addCheckbox("Show SNR1 (with user-defined dark count)", displaySNR1);
         
@@ -327,17 +330,51 @@ public class NoiseStatistics implements Command {
             result.getRangeAnalysis()[0], result.getRangeAnalysis()[1]));
         IJ.log("Peak intensity (I_peak): " + String.format("%.2f", result.getIPeak()));
         IJ.log("");
-        IJ.log("--- Free Fit Results ---");
+        IJ.log("--- Linear Fit Results ---");
         IJ.log("Zero intercept (I0): " + String.format("%.2f", result.getI0()));
         IJ.log("Slope: " + String.format("%.2f", result.getSlope()));
+        IJ.log("R\u00b2: " + String.format("%.5f", result.getR2Linear()));
         IJ.log("SNR <S^2>/<N^2>: " + String.format("%.2f", result.getSNR()));
+		IJ.log("Secondary electron yield: " + String.format("%.3e", estimateSecondaryElectronYield(result.getSNR())));
         IJ.log("");
         IJ.log("--- Fit with Dark Count ---");
         IJ.log("Dark Count: " + String.format("%.2f", darkCount));
         IJ.log("Slope: " + String.format("%.2f", result.getSlopeHeader()));
+        IJ.log("R\u00b2: " + String.format("%.5f", result.getR2Constrained()));
         IJ.log("SNR1 <S^2>/<N^2>: " + String.format("%.2f", result.getSNR1()));
     }
-       
+
+    private double estimateSecondaryElectronYield(double snr) { 
+		double pixelDose = getPixelDose(imp);
+		return snr / pixelDose; 
+	}
+
+	/** Extracts pixel dose from image info for .dat files */
+	private double getPixelDose(ImagePlus imp) {
+		String info = imp.getInfoProperty();
+		if (info == null || info.isEmpty()) {		
+			return -1.0;
+		}
+		
+		// Look for pattern "Pixel Dose= X.XX"
+		String[] lines = info.split("\n");
+		for (String line : lines) {
+			line = line.trim();
+			
+			if (line.startsWith("Pixel Dose= ")) {
+	            try {
+	                String valueStr = line.substring("Pixel Dose= ".length()).trim();
+	                double value = Double.parseDouble(valueStr);
+
+					return value;
+	            } catch (NumberFormatException | IndexOutOfBoundsException e) {
+	                IJ.log("Warning: Found 'Pixel Dose= ' line but could not parse value: " + line);
+	            }
+	        }
+		}
+		return -1.0;
+	}
+
 	/** Creates a plot showing variance vs mean intensity with fitted lines */
     private Plot plotNoiseDistribution(
     		NoiseStatisticsData result,
@@ -354,6 +391,8 @@ public class NoiseStatistics implements Command {
     	double snr = result.getSNR();
     	double snr1 = result.getSNR1();
     	double slopeHeader = result.getSlopeHeader();
+    	double r2Linear = result.getR2Linear();
+    	double r2Constrained = result.getR2Constrained();
         
         Plot plot = new Plot(
             "Noise Distribution: " + imageTitle,
@@ -380,7 +419,7 @@ public class NoiseStatistics implements Command {
         plot.setColor("cyan");
         plot.drawDottedLine(rangeAnalysis[1], limits[2], rangeAnalysis[1], limits[3], 1);
         
-        // Add free fit line if requested
+        // Add linear fit line if requested
 		plot.setLineWidth(1.5f);
         if (showSNR) {
             fitX = new double[] {rangeAnalysis[0], rangeAnalysis[1]};
@@ -392,8 +431,8 @@ public class NoiseStatistics implements Command {
 			plot.setColor(new Color(170, 0, 255));
 			plot.addPoints(fitX, fitY, Plot.LINE);
             legend.append(String.format(
-                "Free fit: SNR = %.3f, I0 = %.3f\n",
-                snr, i0
+                "Linear fit: SNR = %.3f, I0 = %.3f, R\u00b2 = %.5f\n",
+                snr, i0, r2Linear
             ));            
         }
         
@@ -407,8 +446,8 @@ public class NoiseStatistics implements Command {
             plot.setColor(new Color(0, 221, 0));
             plot.addPoints(fitX, fitY, Plot.LINE);
             legend.append(String.format(
-                "Constrained fit: SNR1 = %.3f, I1 = %.3f\n",
-                snr1, darkCount
+                "Constrained fit: SNR1 = %.3f, I1 = %.3f, R\u00b2 = %.5f\n",
+                snr1, darkCount, r2Constrained
             ));
         }
 

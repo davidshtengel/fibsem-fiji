@@ -194,11 +194,15 @@ public class NoiseStatisticsAnalyzer {
         
         // Fit with dark count (forced intercept)
         double slopeHeader = meanVarianceRatio(meanArray, varArray, darkCount);
-        
+
+        // Compute R² goodness-of-fit for both models
+        double r2Linear = computeLinearRSquared(meanArray, varArray, slope, intercept);
+        double r2Constrained = computeConstrainedRSquared(meanArray, varArray, slopeHeader, darkCount);
+
         // Compute SNR values
         double snr = computeSNR(smoothedFilt, diffFilt, i0);
         double snr1 = computeSNR(smoothedFilt, diffFilt, darkCount);
-        
+
         return new NoiseStatisticsData(
             meanArray,
             varArray,
@@ -210,7 +214,9 @@ public class NoiseStatisticsAnalyzer {
             iPeak,
             varPeak,
             rangeAnalysis,
-            rangeDisplay
+            rangeDisplay,
+            r2Linear,
+            r2Constrained
         );
     }
 	
@@ -455,6 +461,42 @@ public class NoiseStatisticsAnalyzer {
         return count > 0 ? sumRatio / count : 1.0;
     }
     
+    /**
+     * Computes R² for a linear fit: y = slope * x + intercept.
+     */
+    private static double computeLinearRSquared(double[] x, double[] y, double slope, double intercept) {
+        double meanY = 0;
+        for (double v : y) meanY += v;
+        meanY /= y.length;
+
+        double ssTot = 0, ssRes = 0;
+        for (int i = 0; i < x.length; i++) {
+            ssTot += (y[i] - meanY) * (y[i] - meanY);
+            double predicted = slope * x[i] + intercept;
+            double residual = y[i] - predicted;
+            ssRes += residual * residual;
+        }
+        return 1.0 - ssRes / (ssTot + 1e-30);
+    }
+
+    /**
+     * Computes R² for the constrained fit: y = slope * (x - offset).
+     */
+    private static double computeConstrainedRSquared(double[] x, double[] y, double slope, double offset) {
+        double meanY = 0;
+        for (double v : y) meanY += v;
+        meanY /= y.length;
+
+        double ssTot = 0, ssRes = 0;
+        for (int i = 0; i < x.length; i++) {
+            ssTot += (y[i] - meanY) * (y[i] - meanY);
+            double predicted = slope * (x[i] - offset);
+            double residual = y[i] - predicted;
+            ssRes += residual * residual;
+        }
+        return 1.0 - ssRes / (ssTot + 1e-30);
+    }
+
     /**
      * Computes signal-to-noise ratio as ⟨(s_d-B_d)²⟩ / ⟨n_d²⟩.
      *

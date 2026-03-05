@@ -20,16 +20,16 @@ public class NoiseStatisticsData {
     /** Variance of residual (noise) per analysis bin. */
     private final double[] varianceValues;
 
-    /** Zero-intercept intensity (i_0) from free linear fit. */
+    /** Zero-intercept intensity (i_0) from linear linear fit. */
     private final double i0;
 
-    /** Signal-to-noise ratio from free fit. */
+    /** Signal-to-noise ratio from linear fit. */
     private final double snr;
 
     /** Signal-to-noise ratio using fixed dark-count offset. */
     private final double snr1;
 
-    /** Slope of variance–mean relationship from free fit. */
+    /** Slope of variance–mean relationship from linear fit. */
     private final double slope;
 
     /** Slope of variance–mean relationship with dark-count correction. */
@@ -46,18 +46,26 @@ public class NoiseStatisticsData {
 
     /** Intensity range used for display and histogram visualization. */
     private final double[] rangeDisplay;
-    
-    public NoiseStatisticsData(double[] meanValues, 
-							double[] varianceValues, 
-							double i0, 
-							double snr, 
-							double snr1, 
-							double slope, 
-							double slopeHeader, 
-							double iPeak, 
-							double varPeak, 
-							double[] rangeAnalysis, 
-							double[] rangeDisplay) {
+
+    /** R² goodness-of-fit for the linear linear fit. */
+    private final double r2Linear;
+
+    /** R² goodness-of-fit for the constrained (dark-count) fit. */
+    private final double r2Constrained;
+
+    public NoiseStatisticsData(double[] meanValues,
+							double[] varianceValues,
+							double i0,
+							double snr,
+							double snr1,
+							double slope,
+							double slopeHeader,
+							double iPeak,
+							double varPeak,
+							double[] rangeAnalysis,
+							double[] rangeDisplay,
+							double r2Linear,
+							double r2Constrained) {
         this.meanValues = meanValues;
         this.varianceValues = varianceValues;
         this.i0 = i0;
@@ -69,6 +77,8 @@ public class NoiseStatisticsData {
         this.varPeak = varPeak;
         this.rangeAnalysis = rangeAnalysis;
         this.rangeDisplay = rangeDisplay;
+        this.r2Linear = r2Linear;
+        this.r2Constrained = r2Constrained;
     }
     
     public double[] getMeanValues() { return meanValues; }
@@ -82,6 +92,8 @@ public class NoiseStatisticsData {
     public double getVarPeak() { return varPeak; }
     public double[] getRangeAnalysis() { return rangeAnalysis; }
     public double[] getRangeDisplay() { return rangeDisplay; }
+    public double getR2Linear() { return r2Linear; }
+    public double getR2Constrained() { return r2Constrained; }
     
     @Override
     public String toString() {
