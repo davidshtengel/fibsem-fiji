@@ -223,6 +223,10 @@ public class HeaderData {
     private float contrastA;
     private float brightnessB;
     private float contrastB;
+    public float getBrightnessA() { return brightnessA; }
+    public float getContrastA() { return contrastA; }
+    public float getBrightnessB() { return brightnessB; }
+    public float getContrastB() { return contrastB; }
     public void setBrightnessA(float brightnessA) { this.brightnessA = brightnessA; }
 	public void setContrastA(float contrastA) { this.contrastA = contrastA; }
 	public void setBrightnessB(float brightnessB) { this.brightnessB = brightnessB; }
@@ -233,6 +237,10 @@ public class HeaderData {
     private byte fibProbe;
     private float fibCurrent;
     private float fibRotation;
+    public float getFIBFocus() { return fibFocus; }
+    public byte getFIBProbe() { return fibProbe; }
+    public float getFIBCurrent() { return fibCurrent; }
+    public float getFIBRotation() { return fibRotation; }
     public void setFIBFocus(float fibFocus) { this.fibFocus = fibFocus; }
 	public void setFIBProbe(byte fibProbe) { this.fibProbe = fibProbe; }
 	public void setFIBCurrent(float fibCurrent) { this.fibCurrent = fibCurrent; }
