@@ -15,7 +15,9 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import com.shtengel.fib_sem.core.DatFileProcessor;
+import com.shtengel.fib_sem.core.ThresholdAnalyzer;
 import com.shtengel.fib_sem.data.HeaderData;
+import com.shtengel.fib_sem.data.ThresholdData;
 import com.shtengel.fib_sem.data.FileData;
 
 /**
@@ -110,6 +112,10 @@ public class ReadDatFile implements Command {
 				String windowTitle = getBaseName(inputFile) + "_" + getSafeFileString(label);
 				ImagePlus channelImage = new ImagePlus(windowTitle, ip);
 				
+				float[] pixels = (float[]) channelImage.getProcessor().convertToFloatProcessor().getPixels();
+				ThresholdData data = ThresholdAnalyzer.computeThresholds(pixels, 0.001, 0.001, 256);
+				
+				IJ.setMinAndMax(channelImage, data.getMinThreshold(), data.getMaxThreshold());
 				setCalibration(channelImage, header);
 				addHeaderInfo(channelImage, header, label);
 				setFileInfo(channelImage, inputFile);
@@ -121,6 +127,10 @@ public class ReadDatFile implements Command {
 				}
 			}
 		} else {
+			float[] pixels = (float[]) imp.getProcessor().convertToFloatProcessor().getPixels();
+			ThresholdData data = ThresholdAnalyzer.computeThresholds(pixels, 0.001, 0.001, 256);	
+			IJ.setMinAndMax(imp, data.getMinThreshold(), data.getMaxThreshold());
+
 			// Single channel data
 			setCalibration(imp, header);
 			addHeaderInfo(imp, header, "Single Channel");
