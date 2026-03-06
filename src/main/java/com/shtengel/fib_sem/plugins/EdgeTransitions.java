@@ -10,6 +10,7 @@ import ij.gui.GenericDialog;
 import ij.gui.Overlay;
 import ij.gui.Plot;
 import ij.gui.PointRoi;
+import ij.gui.Line;
 import ij.gui.Roi;
 import java.awt.Color;
 import java.util.Arrays;
@@ -290,29 +291,58 @@ public class EdgeTransitions implements Command {
 		double[] transitions = result.getTransitionDistances();
 		int[] xSelected = result.getXSelected();
 		int[] ySelected = result.getYSelected();
+		double[] cosX = result.getCosXSelected();
+		double[] cosY = result.getCosYSelected();
+		double[][] imgVals = result.getImageValuesAll();
 
 		if (xSelected.length == 0) {
 			IJ.log("No valid edge points to display");
 			return null;
 		}
-				
+
 		ImagePlus impCopy = imp.duplicate();
 		impCopy.setTitle("Visualized Edge Points: " + imp.getTitle());
         Overlay overlay = new Overlay();
 
+        // Determine profile half-length for transition lines
+        int profileLength = (imgVals != null && imgVals.length > 0) ? imgVals[0].length : 0;
+        int halfLength = profileLength / 2;
+        int imgWidth = imp.getWidth();
+        int imgHeight = imp.getHeight();
+
         for (int i = 0; i < xSelected.length; i++) {
         	Color color = getTransitionColor(transitions[i], result);
+        	double cx = xSelected[i] + xOffset;
+        	double cy = ySelected[i] + yOffset;
 
-        	PointRoi point = new PointRoi(xSelected[i] + xOffset, ySelected[i] + yOffset);
-        	point.setPointType(2); 
-        	point.setSize(2);
+        	// Draw transition line along gradient direction
+        	if (profileLength > 0) {
+        		double x1 = cx + cosX[i] * (-halfLength + 1);
+        		double y1 = cy + cosY[i] * (-halfLength + 1);
+        		double x2 = cx + cosX[i] * (profileLength - halfLength);
+        		double y2 = cy + cosY[i] * (profileLength - halfLength);
+
+        		// Clip endpoints to image bounds
+        		if (x1 >= 0 && x1 <= imgWidth && y1 >= 0 && y1 <= imgHeight
+        				&& x2 >= 0 && x2 <= imgWidth && y2 >= 0 && y2 <= imgHeight) {
+        			Line line = new Line(x1, y1, x2, y2);
+        			line.setStrokeColor(Color.YELLOW);
+        			line.setStrokeWidth(1);
+        			overlay.add(line);
+        		}
+        	}
+
+        	// Draw edge point marker
+        	PointRoi point = new PointRoi(cx, cy);
+        	point.setPointType(2);
+        	point.setSize(1);
         	point.setStrokeColor(color);
-        	
+
         	overlay.add(point);
         }
-        
+
         impCopy.setOverlay(overlay);
-        
+
         return impCopy;
 	}
 
