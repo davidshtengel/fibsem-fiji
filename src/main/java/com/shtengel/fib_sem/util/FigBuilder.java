@@ -12,11 +12,6 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
 public class FigBuilder {
-
-	public enum Type {
-		THRESHOLD,
-		RESOLUTION
-	}
 	
 	private final static int TITLE_HEIGHT = 50;
 	private final static int TITLE_FONT_SIZE = 32;
