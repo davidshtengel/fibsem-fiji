@@ -99,12 +99,14 @@ src/main/java/com/shtengel/fib_sem/
 │   ├── GradientMap.java
 │   ├── NoiseStatistics.java
 │   ├── ReadDatFile.java
+│   ├── SaveSnapshot.java
 │   └── Thresholds.java
 └── util/           # Shared utilities
-├── EllipseFitter.java
-├── FigBuilder.java
-├── ImageResolver.java
-└── ParamPersister.java
+    ├── DoubleGaussianFitter.java
+    ├── EllipseFitter.java
+    ├── FigBuilder.java
+    ├── ImageResolver.java
+    └── ParamPersister.java
 ```
 
 
