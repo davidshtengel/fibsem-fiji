@@ -365,6 +365,7 @@ public class HeaderData {
 	    info.append("ContrastA= ").append(contrastA).append("\n");
 	    info.append("BrightnessB= ").append(brightnessB).append("\n");
 	    info.append("ContrastB= ").append(contrastB).append("\n");
+		info.append("WorkingDistance= ").append(workingDistance).append(" mm\n");
 	    info.append("FocusIndex= ").append(focusIndex).append("\n\n");
 
 	    // Stage position
