@@ -1,3 +1,4 @@
+[![DOI:10.64898/2026.03.11.711125](http://img.shields.io/badge/DOI-10.64898/2026.03.11.711125-B31B1B.svg)](https://doi.org/10.64898/2026.03.11.711125)
 # FIB-SEM Toolkit
 
 A Fiji/ImageJ plugin suite for quantitative analysis of Focused Ion Beam - Scanning Electron Microscopy (FIB-SEM) images.
