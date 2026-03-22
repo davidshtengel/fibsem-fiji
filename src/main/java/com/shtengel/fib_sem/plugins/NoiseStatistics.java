@@ -12,6 +12,7 @@ import com.shtengel.fib_sem.core.NoiseStatisticsAnalyzer;
 import com.shtengel.fib_sem.data.NoiseStatisticsData;
 import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
+import com.shtengel.fib_sem.util.OverlayTint;
 import com.shtengel.fib_sem.util.ParamPersister;
 
 import ij.IJ;
@@ -247,35 +248,36 @@ public class NoiseStatistics implements Command {
         float gradientCutoff = NoiseStatisticsAnalyzer.computeGradientCutoff(gradients, gradientThreshold);
         
         ColorProcessor maskVis = new ColorProcessor(width, height);
-        
-        // Create color overlay
+
+        float range = (float) (max - min);
+        if (range == 0) range = 1;
+
+        // Create tinted color overlay
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int idx = y * width + x;
                 float val = smoothed[idx];
-                
+                int gray = OverlayTint.toGray(val, (float) min, range);
+
                 boolean isBorder = (y == 0 || y == height - 1 || x == 0 || x == width - 1);
-                                
+
                 // Check exclusion criteria
                 boolean belowMin = (val < minThreshold);
                 boolean aboveMax = (val > maxThreshold);
                 boolean highGradient = !isBorder && (gradients[idx] > gradientCutoff);
-                
+
                 int color;
-                
+
                 if (isBorder) {
-                	color = 0x404040;
+                	color = OverlayTint.grayscale(gray);
                 } else if (belowMin) {
-                	color = 0xFF0000;
+                	color = OverlayTint.redTint(gray);
                 } else if (aboveMax) {
-                	color = 0x00FFFF;
+                	color = OverlayTint.cyanTint(gray);
                 } else if (highGradient) {
-                	color = 0x0000FF;
+                	color = OverlayTint.blueTint(gray);
                 } else {
-                	float pixelValue = fp.getf(x, y);
-                    int scaledValue = (int) (255.0 * (pixelValue - min) / (max - min));
-                    scaledValue = Math.min(255, Math.max(0, scaledValue));    
-                    color = (scaledValue << 16) | (scaledValue << 8) | scaledValue;                
+                	color = OverlayTint.grayscale(gray);
 				}
                 maskVis.set(x, y, color);
             }
@@ -292,7 +294,7 @@ public class NoiseStatistics implements Command {
         IJ.log("Red: Pixels excluded (below intensity threshold)");
         IJ.log("Blue: Pixels excluded (high local gradient)");
         IJ.log("Grayscale: Pixels included in analysis");
-        IJ.log("Dark Gray: Pixels excluded (border, not analyzed)");
+        IJ.log("Grayscale (border): Pixels excluded (border, not analyzed)");
         
         return maskImp;
     }
