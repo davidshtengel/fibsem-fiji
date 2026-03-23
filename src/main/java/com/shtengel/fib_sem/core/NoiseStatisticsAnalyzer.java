@@ -70,8 +70,11 @@ public class NoiseStatisticsAnalyzer {
 		// Smooth the image (convolution respects ROI internally)
 		FloatProcessor fpSmoothed = smoothImage(fp, kernel);
         
-        // Compute gradient magnitudes for filtering
-        float[] gradientMagnitudes = computeGradientMagnitudes(fp);
+        // Compute gradient magnitudes for filtering (delegate to GradientMapAnalyzer)
+        float[][] gradComponents = GradientMapAnalyzer.computeGradientComponents(
+            fp.duplicate().convertToFloatProcessor(), false);
+        float[] gradientMagnitudes = GradientMapAnalyzer.computeGradientMagnitude(
+            gradComponents[0], gradComponents[1], fp, false);
         
         // Collect pixels w/in ROI bounds (exclude a 1-pixel border due to convolution)
         ArrayList<Float> pixelsSmoothedList = new ArrayList<>();
@@ -221,34 +224,18 @@ public class NoiseStatisticsAnalyzer {
     }
 	
 	/**
-	 * Computes local gradient magnitude for each pixel using central differences.
-	 * Border pixels are set to zero.
-	 */
-	private static float[] computeGradientMagnitudes(FloatProcessor fp) {
-	    int width = fp.getWidth();
-	    int height = fp.getHeight();
-	    float[] gradients = new float[width * height];
-
-	    for (int y = 1; y < height - 1; y++) {
-	        for (int x = 1; x < width - 1; x++) {
-	            float gx = fp.getf(x + 1, y) - fp.getf(x - 1, y);
-	            float gy = fp.getf(x, y + 1) - fp.getf(x, y - 1);
-	            gradients[y * width + x] = (float) Math.sqrt(gx * gx + gy * gy);
-	        }
-	    }
-
-	    return gradients;
-	}
-	
-	/**
-	 * Public wrapper for gradient magnitude computation.
+	 * Computes gradient magnitudes for the given image processor,
+	 * delegating to {@link GradientMapAnalyzer} for consistent scaling.
 	 *
 	 * @param ip source image processor
 	 * @return flattened array of gradient magnitudes
 	 */
 	public static float[] computeGradientMagnitudes(ImageProcessor ip) {
 	    FloatProcessor fp = ip.convertToFloatProcessor();
-	    return computeGradientMagnitudes(fp);
+	    float[][] components = GradientMapAnalyzer.computeGradientComponents(
+	        fp.duplicate().convertToFloatProcessor(), false);
+	    return GradientMapAnalyzer.computeGradientMagnitude(
+	        components[0], components[1], fp, false);
 	}
 	
 	/**

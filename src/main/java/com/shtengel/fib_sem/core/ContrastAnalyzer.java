@@ -116,28 +116,52 @@ public class ContrastAnalyzer {
 	}
 
 	/**
+	 * Computes gradient magnitudes for the given image processor.
+	 *
+	 * <p>Crops to ROI if set, converts to float, then computes gradient
+	 * magnitude via central finite differences (no smoothing, no normalization).</p>
+	 *
+	 * @param ip source image processor (ROI is respected if set)
+	 * @return flattened gradient magnitude array (length = croppedWidth * croppedHeight)
+	 */
+	public static float[] computeGradientMagnitudes(ImageProcessor ip) {
+		ImageProcessor cropped = (ip.getRoi() != null) ? ip.crop() : ip;
+		FloatProcessor fp = cropped.convertToFloatProcessor();
+		float[][] components = GradientMapAnalyzer.computeGradientComponents(
+			fp.duplicate().convertToFloatProcessor(), false);
+		return GradientMapAnalyzer.computeGradientMagnitude(
+			components[0], components[1], fp, false);
+	}
+
+	/**
+	 * Computes smoothed pixel values for the given image processor.
+	 *
+	 * <p>Crops to ROI if set, converts to float, duplicates, applies
+	 * default smoothing, and returns the smoothed pixel array.</p>
+	 *
+	 * @param ip source image processor (ROI is respected if set)
+	 * @return flattened smoothed pixel array (length = croppedWidth * croppedHeight)
+	 */
+	public static float[] computeSmoothedPixels(ImageProcessor ip) {
+		ImageProcessor cropped = (ip.getRoi() != null) ? ip.crop() : ip;
+		FloatProcessor fp = cropped.convertToFloatProcessor();
+		FloatProcessor smoothedFp = fp.duplicate().convertToFloatProcessor();
+		GradientMapAnalyzer.applyDefaultSmoothing(smoothedFp);
+		return (float[]) smoothedFp.getPixels();
+	}
+
+	/**
 	 * Extracts the gradient-filtered, smoothed pixel subset from the image.
 	 */
 	private static double[][] extractSubset(ImageProcessor ip, double gradientThreshold) {
 		ImageProcessor cropped = (ip.getRoi() != null) ? ip.crop() : ip;
-		FloatProcessor fp = cropped.convertToFloatProcessor();
 		int width = cropped.getWidth();
 		int height = cropped.getHeight();
 		int totalPixels = width * height;
 
-		// Compute gradient magnitudes
-		float[][] components = GradientMapAnalyzer.computeGradientComponents(
-			fp.duplicate().convertToFloatProcessor(), false);
-		float[] gradMag = GradientMapAnalyzer.computeGradientMagnitude(
-			components[0], components[1], fp, false);
-
-		// Determine gradient cutoff (from CDF)
+		float[] gradMag = computeGradientMagnitudes(ip);
 		float gradientCutoff = computeGradientCutoff(gradMag, width, height, gradientThreshold);
-
-		// Smooth image
-		FloatProcessor smoothedFp = fp.duplicate().convertToFloatProcessor();
-		GradientMapAnalyzer.applyDefaultSmoothing(smoothedFp);
-		float[] smoothed = (float[]) smoothedFp.getPixels();
+		float[] smoothed = computeSmoothedPixels(ip);
 
 		// Extract subset where gradient < cutoff (excluding 1-pixel border)
 		ArrayList<Double> subsetList = new ArrayList<>();
@@ -149,7 +173,7 @@ public class ContrastAnalyzer {
 				}
 			}
 		}
-		double[] values = toArray(subsetList); 
+		double[] values = toArray(subsetList);
 		return new double[][] {values, {totalPixels}, {subsetList.size()}};
 	}
 
@@ -163,7 +187,7 @@ public class ContrastAnalyzer {
      * @param gradientThreshold  fraction of pixels to retain (0 to 1)
      * @return the gradient cutoff value
      */
-    static float computeGradientCutoff(float[] gradients, int width, int height, double gradientThreshold) {
+    public static float computeGradientCutoff(float[] gradients, int width, int height, double gradientThreshold) {
         // Collect interior gradient values (skip 1-pixel border)
         int interiorCount = (width - 2) * (height - 2);
         float[] interior = new float[interiorCount];
