@@ -1,10 +1,28 @@
 package com.shtengel.fib_sem.plugins;
 
-import java.awt.Checkbox;
+import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.TextField;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.LinkedHashMap;
-import java.util.Vector;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.Timer;
 
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
@@ -15,14 +33,16 @@ import com.shtengel.fib_sem.data.ThresholdData;
 import com.shtengel.fib_sem.util.DoubleGaussianFitter;
 import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
+import com.shtengel.fib_sem.util.LinkedSliderField;
+import com.shtengel.fib_sem.util.OverlayTint;
 import com.shtengel.fib_sem.util.ParamPersister;
 
 import ij.IJ;
 import ij.ImagePlus;
-import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.gui.Roi;
 import ij.io.FileInfo;
+import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
 
 /**
@@ -31,6 +51,9 @@ import ij.process.ImageProcessor;
  * <p>Uses gradient filtering to select low-texture pixels, identifies
  * high- and low-intensity peaks via CDF thresholds, and reports the
  * contrast metric {@code (I_high - I_low) / (I_mean - I0)}.</p>
+ * 
+ * <p>Provides an interactive preview window with sliders for I-Low, I-High,
+ * and gradient threshold. Excluded pixels are visualized with color overlays.
  *
  * <p>The dark count (I0) can be pre-computed by running the Noise Statistics plugin first,
  * or entered manually.</p>
@@ -51,6 +74,32 @@ public class Contrast implements Command {
 	private boolean showComponents;
 	private boolean saveFigs;
 	private ImagePlus imp;
+	private ImageProcessor croppedIp;
+	private int cropWidth, cropHeight;
+
+	// Cached intermediate data (computed once on open)
+	private float[] cachedGradMagnitudes;
+	private float[] cachedSmoothedPixels;
+	private float minIntensity, maxIntensity;
+
+	// Preview (allocated once, reused across updatePreview() calls)
+	private ImagePlus previewImp;
+	private int[] previewRgb;
+	private ColorProcessor previewCp;
+
+	// UI components
+	private JFrame frame;
+	private LinkedSliderField gradientSliderField, iLowSliderField, iHighSliderField;
+	private JCheckBox autoModeCheckbox, showComponentsCheckbox, saveFigsCheckbox;
+	private JTextField i0Field, nbinsField;
+	private JButton applyButton;
+	private Timer updateTimer;
+
+	// Pre-sorted interior gradients for timely lookup
+	private float[] sortedInteriorGradients;
+
+	// Track whether auto-fit values have been populated
+	private boolean autoFitPopulated = false;
 
 	@Override
 	public void run() {
@@ -60,9 +109,7 @@ public class Contrast implements Command {
 			return;
 		}
 
-		if(!showDialog()) {
-			return;
-		}
+		getAllPersistedParams();
 
 		ImageProcessor ip = imp.getProcessor();
 		if (ip == null) {
@@ -70,33 +117,368 @@ public class Contrast implements Command {
 			return;
 		}
 
-		// Apply the ROI to processor if present
 		Roi roi = imp.getRoi();
 		if (roi != null) {
-            ip.setRoi(roi);
-            String roiName = roi.getName() != null ? roi.getName() : "unnamed ROI";
-            IJ.log("Processing ROI: " + roiName + " (type: " + roi.getTypeAsString() + ")");
-        } else {
-            IJ.log("Processing entire image (no ROI selected)");
-        }
-
-		// Compute contrast (auto or manual)
-		ContrastData result;
-		if (autoMode) {
-			result = ContrastAnalyzer.computeContrastAuto(
-				ip, i0, gradientThreshold, nbins
-			);
+			ip.setRoi(roi);
+			croppedIp = ip.crop();
+			String roiName = roi.getName() != null ? roi.getName() : "unnamed ROI";
+			IJ.log("Preview using ROI: " + roiName + " (type: " + roi.getTypeAsString() + ")");
 		} else {
-			result = ContrastAnalyzer.computeContrastManual(
-				ip, i0, gradientThreshold, iLow, iHigh, nbins
-			);
+			croppedIp = ip;
+			IJ.log("Preview using entire image (no ROI selected)");
+		}
+		cropWidth = croppedIp.getWidth();
+		cropHeight = croppedIp.getHeight();
+
+		// Cache gradient magnitudes and smoothed pixels (one-time computation)
+		IJ.showStatus("Computing gradient map for preview...");
+		cachedGradMagnitudes = ContrastAnalyzer.computeGradientMagnitudes(croppedIp);
+		cachedSmoothedPixels = ContrastAnalyzer.computeSmoothedPixels(croppedIp);
+
+		// Determine intensity range from smoothed pixels
+		minIntensity = Float.MAX_VALUE;
+		maxIntensity = -Float.MAX_VALUE;
+		for (float v : cachedSmoothedPixels) {
+			if (v < minIntensity) minIntensity = v;
+			if (v > maxIntensity) maxIntensity = v;
 		}
 
-		// Log results
-        logResults(result);
+		int interiorCount = (cropWidth - 2) * (cropHeight - 2);
+		sortedInteriorGradients = new float[interiorCount];
+		int k = 0;
+		for (int y = 1; y < cropHeight - 1; y++) {
+			for (int x = 1; x < cropWidth - 1; x++) {
+				sortedInteriorGradients[k++] = cachedGradMagnitudes[y * cropWidth + x];
+			}
+		}
+		java.util.Arrays.sort(sortedInteriorGradients);
 
-        // Create PDF plot
-        Plot pdfPlot = plotContrastPDF(result, imp.getTitle());
+		// Allocate reusable preview buffers
+		previewRgb = new int[cropWidth * cropHeight];
+		previewCp = new ColorProcessor(cropWidth, cropHeight, previewRgb);
+
+		// Pre-fill border pixels as grayscale (never changes)
+		float range = maxIntensity - minIntensity;
+		if (range == 0) range = 1;
+		for (int x = 0; x < cropWidth; x++) {
+			int topIdx = x;
+			int botIdx = (cropHeight - 1) * cropWidth + x;
+			previewRgb[topIdx] = OverlayTint.grayscale(
+				OverlayTint.toGray(cachedSmoothedPixels[topIdx], minIntensity, range));
+			previewRgb[botIdx] = OverlayTint.grayscale(
+				OverlayTint.toGray(cachedSmoothedPixels[botIdx], minIntensity, range));
+		}
+		for (int y = 1; y < cropHeight - 1; y++) {
+			int leftIdx = y * cropWidth;
+			int rightIdx = y * cropWidth + cropWidth - 1;
+			previewRgb[leftIdx] = OverlayTint.grayscale(
+				OverlayTint.toGray(cachedSmoothedPixels[leftIdx], minIntensity, range));
+			previewRgb[rightIdx] = OverlayTint.grayscale(
+				OverlayTint.toGray(cachedSmoothedPixels[rightIdx], minIntensity, range));
+		}
+
+		// Create preview image with the reusable processor
+		previewImp = new ImagePlus("Contrast Preview: " + imp.getTitle(), previewCp);
+		previewImp.show();
+
+		// Build and show the interactive UI
+		SwingUtilities.invokeLater(() -> {
+			buildFrame();
+			updatePreview();
+		});
+	}
+
+	/** Constructs and displays the non-modal control JFrame with all panels. */
+	private void buildFrame() {
+		frame = new JFrame("Contrast Analysis");
+		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				onClose();
+			}
+		});
+
+		JPanel mainPanel = new JPanel();
+		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+		mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+		mainPanel.add(buildI0Panel());
+		mainPanel.add(Box.createVerticalStrut(8));
+		mainPanel.add(buildSlidersPanel());
+		mainPanel.add(Box.createVerticalStrut(8));
+		mainPanel.add(buildOptionsPanel());
+		mainPanel.add(Box.createVerticalStrut(8));
+
+		// Apply/Close button panel
+		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+		applyButton = new JButton("Apply");
+		applyButton.addActionListener(e -> onApply());
+		buttonPanel.add(applyButton);
+		JButton close = new JButton("Close");
+		close.addActionListener(e -> onClose());
+		buttonPanel.add(close);
+		mainPanel.add(buttonPanel);
+
+		frame.getContentPane().add(mainPanel, BorderLayout.CENTER);
+		frame.pack();
+		frame.setMinimumSize(new Dimension(380, 0));
+		frame.setLocationRelativeTo(null);
+		frame.setVisible(true);
+
+		// Debounce timer for preview updates (50ms)
+		updateTimer = new Timer(50, e -> updatePreview());
+		updateTimer.setRepeats(false);
+	}
+
+	/** Builds the I0 (dark count) input panel with optional SNR button. */
+	private JPanel buildI0Panel() {
+		JPanel panel = new JPanel(new GridBagLayout());
+		panel.setBorder(BorderFactory.createTitledBorder("Dark Count (I0)"));
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.insets = new Insets(2, 4, 2, 4);
+		gbc.anchor = GridBagConstraints.WEST;
+
+		if (ranSNR) {
+			gbc.gridx = 0; gbc.gridy = 0;
+			panel.add(new JLabel("I0 (from Noise Statistics):"), gbc);
+			gbc.gridx = 1;
+			i0Field = new JTextField(String.format("%.2f", i0), 8);
+			panel.add(i0Field, gbc);
+		} else {
+			gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+			panel.add(new JLabel("<html><i>I0 not pre-computed. Enter manually or run Noise Statistics.</i></html>"), gbc);
+
+			gbc.gridy = 1; gbc.gridwidth = 1;
+			gbc.gridx = 0;
+			panel.add(new JLabel("I0:"), gbc);
+			gbc.gridx = 1;
+			i0Field = new JTextField(String.format("%.2f", i0), 8);
+			panel.add(i0Field, gbc);
+
+			gbc.gridy = 2; gbc.gridx = 0; gbc.gridwidth = 2;
+			JButton runSNRButton = new JButton("Run Noise Statistics...");
+			runSNRButton.addActionListener(e -> onRunSNR());
+			panel.add(runSNRButton, gbc);
+		}
+
+		return panel;
+	}
+
+	/** Builds the threshold sliders panel using LinkedSliderField components. */
+	private JPanel buildSlidersPanel() {
+		JPanel panel = new JPanel();
+		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+		panel.setBorder(BorderFactory.createTitledBorder("Preview Thresholds"));
+
+		gradientSliderField = new LinkedSliderField(
+			"Gradient threshold:", 0.0, 1.0, gradientThreshold, "%.3f");
+		gradientSliderField.addChangeCallback(this::schedulePreviewUpdate);
+		panel.add(gradientSliderField);
+
+		iLowSliderField = new LinkedSliderField(
+			"I-Low:", minIntensity, maxIntensity, iLow, "%.1f");
+		iLowSliderField.addChangeCallback(this::schedulePreviewUpdate);
+		panel.add(iLowSliderField);
+
+		iHighSliderField = new LinkedSliderField(
+			"I-High:", minIntensity, maxIntensity, iHigh, "%.1f");
+		iHighSliderField.addChangeCallback(this::schedulePreviewUpdate);
+		panel.add(iHighSliderField);
+
+		// Set initial enabled state based on auto mode
+		iLowSliderField.setEnabled(!autoMode);
+		iHighSliderField.setEnabled(!autoMode);
+
+		return panel;
+	}
+
+	/** Builds the options panel (auto mode, show components, bins, save). */
+	private JPanel buildOptionsPanel() {
+		JPanel panel = new JPanel(new GridBagLayout());
+		panel.setBorder(BorderFactory.createTitledBorder("Options"));
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.insets = new Insets(2, 4, 2, 4);
+		gbc.anchor = GridBagConstraints.WEST;
+
+		gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+		autoModeCheckbox = new JCheckBox("Auto detect I-Low / I-High (double-Gaussian fit)", autoMode);
+		autoModeCheckbox.addActionListener(e -> onAutoModeChanged());
+		panel.add(autoModeCheckbox, gbc);
+
+		gbc.gridy = 1;
+		showComponentsCheckbox = new JCheckBox("Show individual Gaussian components on plot", showComponents);
+		showComponentsCheckbox.setEnabled(autoMode);
+		panel.add(showComponentsCheckbox, gbc);
+
+		gbc.gridy = 2; gbc.gridwidth = 1;
+		gbc.gridx = 0;
+		panel.add(new JLabel("Number of bins:"), gbc);
+		gbc.gridx = 1;
+		nbinsField = new JTextField(String.valueOf(nbins), 6);
+		panel.add(nbinsField, gbc);
+
+		gbc.gridy = 3; gbc.gridx = 0; gbc.gridwidth = 2;
+		saveFigsCheckbox = new JCheckBox("Save plot as titled figure", saveFigs);
+		panel.add(saveFigsCheckbox, gbc);
+
+		return panel;
+	}
+
+	/** Restarts the debounce timer for preview updates. */
+	private void schedulePreviewUpdate() {
+		if (updateTimer != null) {
+			updateTimer.restart();
+		}
+	}
+
+	/** Recomputes the RGB preview overlay from cached data and current slider values. */
+	private void updatePreview() {
+		if (previewImp == null || previewImp.getWindow() == null) return;
+
+		// Gradient cutoff from pre-sorted array
+		double gradThresh = gradientSliderField.getValue();
+		int cutoffIdx = Math.min(
+			(int) (gradThresh * sortedInteriorGradients.length),
+			sortedInteriorGradients.length - 1);
+		float gradCutoff = sortedInteriorGradients[cutoffIdx];
+
+		boolean showIntensityOverlay = !autoModeCheckbox.isSelected() || autoFitPopulated;
+		float iLowVal = (float) iLowSliderField.getValue();
+		float iHighVal = (float) iHighSliderField.getValue();
+
+		float range = maxIntensity - minIntensity;
+		if (range == 0) range = 1;
+
+		// Interior pixels only (borders pre-filled in run())
+		for (int y = 1; y < cropHeight - 1; y++) {
+			for (int x = 1; x < cropWidth - 1; x++) {
+				int idx = y * cropWidth + x;
+				float val = cachedSmoothedPixels[idx];
+				int gray = OverlayTint.toGray(val, minIntensity, range);
+
+				if (showIntensityOverlay && val < iLowVal) {
+					previewRgb[idx] = OverlayTint.redTint(gray);
+				} else if (showIntensityOverlay && val > iHighVal) {
+					previewRgb[idx] = OverlayTint.cyanTint(gray);
+				} else if (cachedGradMagnitudes[idx] >= gradCutoff) {
+					previewRgb[idx] = OverlayTint.blueTint(gray);
+				} else {
+					previewRgb[idx] = OverlayTint.grayscale(gray);
+				}
+			}
+		}
+
+		previewImp.updateAndDraw();
+	}
+
+	/** Toggles I-Low/I-High slider and component checkbox enabled states. */
+	private void onAutoModeChanged() {
+		boolean auto = autoModeCheckbox.isSelected();
+		iLowSliderField.setEnabled(!auto);
+		iHighSliderField.setEnabled(!auto);
+		showComponentsCheckbox.setEnabled(auto);
+		schedulePreviewUpdate();
+	}
+
+	/** Launches the Noise Statistics plugin in a background thread, then reloads I0. */
+	private void onRunSNR() {
+		new SwingWorker<Void, Void>() {
+			@Override
+			protected Void doInBackground() {
+				IJ.run("Noise Statistics Analysis (Single Image)");
+				return null;
+			}
+
+			@Override
+			protected void done() {
+				getAllPersistedParams();
+				if (ranSNR) {
+					i0Field.setText(String.format("%.2f", i0));
+					IJ.log("I0 loaded from Noise Statistics: " + String.format("%.2f", i0));
+				} else {
+					IJ.error("Contrast", "SNR analysis did not complete. Please enter I0 manually.");
+				}
+			}
+		}.execute();
+	}
+
+	/**
+	 * Reads all current parameter values from UI controls into instance fields.
+	 *
+	 * @param strict if {@code true}, shows error dialogs and returns {@code false}
+	 *               on parse failures; if {@code false}, silently ignores them
+	 * @return {@code true} if all values were read successfully
+	 */
+	private boolean readUIValues(boolean strict) {
+		try {
+			i0 = Double.parseDouble(i0Field.getText().trim());
+		} catch (NumberFormatException ex) {
+			if (strict) { IJ.error("Contrast", "I0 must be a valid number."); return false; }
+		}
+		gradientThreshold = gradientSliderField.getValue();
+		autoMode = autoModeCheckbox.isSelected();
+		showComponents = showComponentsCheckbox.isSelected();
+		saveFigs = saveFigsCheckbox.isSelected();
+		try {
+			nbins = Integer.parseInt(nbinsField.getText().trim());
+		} catch (NumberFormatException ex) {
+			if (strict) { IJ.error("Contrast", "Number of bins must be a valid integer."); return false; }
+		}
+		if (!autoMode) {
+			iLow = iLowSliderField.getValue();
+			iHigh = iHighSliderField.getValue();
+		}
+		return true;
+	}
+
+	/** Validates parameters, runs contrast analysis in a background thread, and shows results. */
+	private void onApply() {
+		if (!readUIValues(true)) return;
+
+		// Validate
+		if (gradientThreshold < 0 || gradientThreshold > 1) {
+			IJ.error("Contrast", "Gradient threshold must be between 0 and 1.");
+			return;
+		}
+		if (!autoMode && iLow >= iHigh) {
+			IJ.error("Contrast", "I-Low must be less than I-High.");
+			return;
+		}
+		if (nbins < 10 || nbins > 10000) {
+			IJ.error("Contrast", "Number of bins must be between 10 and 10000.");
+			return;
+		}
+
+		applyButton.setEnabled(false);
+		applyButton.setText("Computing...");
+
+		new SwingWorker<ContrastData, Void>() {
+			@Override
+			protected ContrastData doInBackground() {
+				if (autoMode) {
+					return ContrastAnalyzer.computeContrastAuto(croppedIp, i0, gradientThreshold, nbins);
+				} else {
+					return ContrastAnalyzer.computeContrastManual(croppedIp, i0, gradientThreshold, iLow, iHigh, nbins);
+				}
+			}
+
+			@Override
+			protected void done() {
+				try {
+					ContrastData result = get();
+
+					// If auto mode, update sliders to fitted values
+					if (autoMode) {
+						iLow = result.getILow();
+						iHigh = result.getIHigh();
+						autoFitPopulated = true;
+						iLowSliderField.setValue(iLow);
+						iHighSliderField.setValue(iHigh);
+					}
+
+					logResults(result);
+					Plot pdfPlot = plotContrastPDF(result, imp.getTitle());
 
         if (saveFigs) {
             FileInfo fi = imp.getOriginalFileInfo();
@@ -107,146 +489,51 @@ public class Contrast implements Command {
                                      dir + baseName + "_contrast_pdf.png");
         }
 
-        pdfPlot.show();
-        IJ.showStatus("Contrast analysis complete.");
-	}
+					pdfPlot.show();
+					setAllPersistedParams(true);
+					updatePreview();
+					IJ.showStatus("Contrast analysis complete.");
 
-	private boolean showDialog() {
-		getAllPersistedParams();
-
-		GenericDialog gd = new GenericDialog("Contrast Analysis");
-
-		if (ranSNR) {
-			gd.addMessage("I0 was obtained from a prior SNR (Noise Statistics) analysis.\n"
-						 + "It represents the intensity at zero variance (zero variance intercept).");
-			gd.addNumericField("I0 (Pre-computed)", i0, 2, 10, "");
-		} else {
-			gd.addMessage("I0 (dark count) was NOT obtained from a prior SNR (Noise Statistics) analysis.\n"
-						 + "It represents the intensity at zero variance (zero variance intercept).");
-			gd.addCheckbox("Check to run 'Noise Statistics' first, then calculate contrast with loaded I0.", false);
-			gd.addNumericField("I0 (Not pre-computed)", i0, 2, 10, "");
-		
-			@SuppressWarnings("unchecked")
-			Vector<Checkbox> checkboxes = gd.getCheckboxes();
-			@SuppressWarnings("unchecked")
-			Vector<TextField> numericFields = gd.getNumericFields();
-
-			Checkbox runSNRCheckbox = checkboxes.lastElement();
-			TextField i0Field = numericFields.lastElement();
-
-			gd.addDialogListener((dialog, e) -> {
-				i0Field.setEnabled(!runSNRCheckbox.getState());
-				return true;
-			});
-		}
-
-		gd.addMessage("Gradient threshold controls what fraction of pixels (by gradient magnitude)\n"
-                     + "are retained for analysis. E.g. 0.75 keeps 75% of pixels with lowest local gradients.");
-        gd.addNumericField("Gradient threshold", gradientThreshold, 2, 6, "");
-
-        gd.addMessage("Peak identification for I_low and I_high:");
-		gd.addCheckbox("Determine I_low and I_high automatically (double-Gaussian fit)", autoMode);
-		gd.addCheckbox("Show individual Gaussian components on plot", showComponents);
-
-		gd.addNumericField("I_low (lower intensity peak)", iLow, 2, 10, "");
-		gd.addNumericField("I_high (upper intensity peak)", iHigh, 2, 10, "");
-		gd.addNumericField("Number of bins", nbins, 0, 6, "");
-
-		@SuppressWarnings("unchecked")
-		Vector<Checkbox> allCheckboxes = gd.getCheckboxes();
-		@SuppressWarnings("unchecked")
-		Vector<TextField> allNumericFields = gd.getNumericFields();
-		int nCheckboxes = allCheckboxes.size();
-		Checkbox autoCheckbox = allCheckboxes.get(nCheckboxes - 2);
-		Checkbox componentsCheckbox = allCheckboxes.get(nCheckboxes - 1);
-
-		int nFields = allNumericFields.size();
-		TextField iLowField  = allNumericFields.get(nFields - 3);
-		TextField iHighField = allNumericFields.get(nFields - 2);
-		iLowField.setEnabled(!autoMode);
-		iHighField.setEnabled(!autoMode);
-		componentsCheckbox.setEnabled(autoMode);
-
-		gd.addDialogListener((dialog, e) -> {
-			boolean auto = autoCheckbox.getState();
-			iLowField.setEnabled(!auto);
-			iHighField.setEnabled(!auto);
-			componentsCheckbox.setEnabled(auto);
-			return true;
-		});
-
-        gd.addMessage("Export:");
-        gd.addCheckbox("Save plot as titled figure", saveFigs);
-
-        gd.showDialog();
-        if (gd.wasCanceled()) {
-            return false;
-        }
-
-        // Retrieve values
-		if (ranSNR) {
-			i0 = gd.getNextNumber();
-		} else {
-			boolean runSNR = gd.getNextBoolean();
-			i0 = gd.getNextNumber();
-
-			if (runSNR) {
-				IJ.run("Noise Statistics Analysis (Single Image)");  // blocks until plugin's dialog completes
-				getAllPersistedParams();      // re-read i0 from image properties
-				if (!ranSNR) {
-					IJ.error("Contrast", "SNR analysis did not complete. Please enter I0 manually.");
-					return false;
+				} catch (Exception ex) {
+					IJ.error("Contrast", "Analysis failed: " + ex.getMessage());
+				} finally {
+					applyButton.setEnabled(true);
+					applyButton.setText("Apply");
 				}
 			}
-		}
-        gradientThreshold = gd.getNextNumber();
-        autoMode = gd.getNextBoolean();
-        showComponents = gd.getNextBoolean();
-		iLow  = gd.getNextNumber();
-		iHigh = gd.getNextNumber();
-        nbins = (int) gd.getNextNumber();
-        saveFigs = gd.getNextBoolean();
+		}.execute();
+	}
 
-        // Validate
-        if (gradientThreshold < 0 || gradientThreshold > 1) {
-            IJ.error("Invalid gradient threshold. Must be between 0 and 1.");
-            return false;
-        }
-        if (!autoMode) {
-			if (Double.isNaN(iLow) || Double.isNaN(iHigh)) {
-				IJ.error("I_low and I_high must be valid numbers.");
-				return false;
-			}
-			if (iLow >= iHigh) {
-				IJ.error("I_low must be less than I_high.");
-				return false;
-			}
-		}
-        if (nbins < 10 || nbins > 10000) {
-            IJ.error("Number of bins must be between 10 and 10000.");
-            return false;
-        }
+	/** Persists parameters, closes preview window, and disposes the frame. */
+	private void onClose() {
+		readUIValues(false);
+		setAllPersistedParams(false);
 
-        setAllPersistedParams();
-        return true;
+		if (previewImp != null) {
+			previewImp.close();
+			previewImp = null;
+		}
+		if (updateTimer != null) {
+			updateTimer.stop();
+		}
+		if (frame != null) {
+			frame.dispose();
+			frame = null;
+		}
 	}
 
 	/**
-     * Creates a plot showing the histogram (PDF) of the gradient-filtered
-     * smoothed subset, with vertical threshold markers and contrast annotation.
-     *
-     * @param result     the contrast analysis results
-     * @param imageTitle title of the source image
-     * @return {@code Plot} ready for display
-     */
-    private Plot plotContrastPDF(ContrastData result, String imageTitle) {
-        ThresholdData td = result.getThresholdData();
-        double[] pdf = td.getPDF();
-        int nBins = pdf.length;
-        double iLow = result.getILow();
-        double iHigh = result.getIHigh();
-        double minInt = td.getMinIntensity();
-        double maxInt = td.getMaxIntensity();
+	 * Creates a plot showing the histogram (PDF) of the gradient-filtered
+	 * smoothed subset, with vertical threshold markers and contrast annotation.
+	 */
+	private Plot plotContrastPDF(ContrastData result, String imageTitle) {
+		ThresholdData td = result.getThresholdData();
+		double[] pdf = td.getPDF();
+		int nBins = pdf.length;
+		double iLowR = result.getILow();
+		double iHighR = result.getIHigh();
+		double minInt = td.getMinIntensity();
+		double maxInt = td.getMaxIntensity();
 		double contrast = result.getContrast();
 
         // Compute bin centers
@@ -262,13 +549,8 @@ public class Contrast implements Command {
             if (v > maxPdf) maxPdf = v;
         }
 
-        Plot plot = new Plot(
-            "Contrast PDF: " + imageTitle,
-            "Intensity",
-            "Probability Density"
-        );
-
-        StringBuilder legend = new StringBuilder();
+		Plot plot = new Plot("Contrast PDF: " + imageTitle, "Intensity", "Probability Density");
+		StringBuilder legend = new StringBuilder();
 
         // PDF curve
         plot.setColor(Color.BLUE);
@@ -312,17 +594,20 @@ public class Contrast implements Command {
         // Vertical threshold lines
 		plot.setLineWidth(1);
 		plot.setColor(Color.RED);
-        plot.drawDottedLine(iLow, 0, iLow, maxPdf, 1);
-		plot.addPoints(new double[] {iLow, iLow}, new double[] {0, maxPdf}, Plot.DOT);
-		legend.append(String.format("I_low = %.2f\n", iLow));
-        plot.setColor(Color.CYAN);
-        plot.drawDottedLine(iHigh, 0, iHigh, maxPdf, 1);
-		plot.addPoints(new double[] {iHigh, iHigh}, new double[] {0, maxPdf}, Plot.DOT);
-        legend.append(String.format("I_high = %.2f\n", iHigh));
+		plot.drawDottedLine(iLowR, 0, iLowR, maxPdf, 1);
+		plot.addPoints(new double[] {iLowR, iLowR}, new double[] {0, maxPdf}, Plot.DOT);
+		legend.append(String.format("I_low = %.2f\n", iLowR));
+		plot.setColor(Color.CYAN);
+		plot.drawDottedLine(iHighR, 0, iHighR, maxPdf, 1);
+		plot.addPoints(new double[] {iHighR, iHighR}, new double[] {0, maxPdf}, Plot.DOT);
+		legend.append(String.format("I_high = %.2f\n", iHighR));
 
-        // Annotations
-        plot.setColor(Color.BLACK);
-		plot.addLabel(0.7, 0.25, String.format("I0 = %.2f\nContrast = %.3f", i0, contrast));
+		// Annotations as legend entries (invisible dummy series)
+		plot.setColor(Color.BLACK);
+		plot.addPoints(new double[] {Double.NaN}, new double[] {Double.NaN}, Plot.DOT);
+		legend.append(String.format("I0 = %.2f\n", i0));
+		plot.addPoints(new double[] {Double.NaN}, new double[] {Double.NaN}, Plot.DOT);
+		legend.append(String.format("Contrast = %.3f\n", contrast));
 
         plot.addLegend(legend.toString());
 		plot.setFrameSize(800,600);
@@ -359,10 +644,10 @@ public class Contrast implements Command {
 		iLow  = ParamPersister.get(imp, "C_iLow", 0.0);
 		iHigh = ParamPersister.get(imp, "C_iHigh", 0.0);
 		nbins = ParamPersister.get(imp, "C_nbins", 256);
-        saveFigs = ParamPersister.get(imp, 	"C_saveFigs", false);
+		saveFigs = ParamPersister.get(imp, "C_saveFigs", false);
 	}
 
-	private void setAllPersistedParams() {
+	private void setAllPersistedParams(boolean showLog) {
 		ParamPersister.set(imp, "C_ranSNR", ranSNR);
 		ParamPersister.set(imp, "C_i0", i0);
         ParamPersister.set(imp, "C_gradientThreshold", gradientThreshold);
@@ -370,8 +655,10 @@ public class Contrast implements Command {
 		ParamPersister.set(imp, "C_iLow", iLow);
 		ParamPersister.set(imp, "C_iHigh", iHigh);
 		ParamPersister.set(imp, "C_nbins", nbins);
-        ParamPersister.set(imp, "C_saveFigs", saveFigs);
-        logParams();
+		ParamPersister.set(imp, "C_saveFigs", saveFigs);
+		if (showLog) {
+			logParams();
+		}
 	}
 
 	private void logParams() {
