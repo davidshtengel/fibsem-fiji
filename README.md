@@ -107,6 +107,8 @@ src/main/java/com/shtengel/fib_sem/
     ├── EllipseFitter.java
     ├── FigBuilder.java
     ├── ImageResolver.java
+    ├── LinkedSliderField.java
+    ├── OverlayTint.java
     └── ParamPersister.java
 ```
 
