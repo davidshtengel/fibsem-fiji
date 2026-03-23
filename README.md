@@ -1,4 +1,5 @@
-[![DOI:10.64898/2026.03.11.711125](http://img.shields.io/badge/DOI-10.64898/2026.03.11.711125-B31B1B.svg)](https://doi.org/10.64898/2026.03.11.711125)
+[![DOI:10.64898/2026.03.11.711125](http://img.shields.io/badge/DOI-10.64898/2026.03.11.711125-B31B1B.svg)](https://doi.org/10.64898/2026.03.11.711125) [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE) [![Fiji](https://img.shields.io/badge/Platform-Fiji%2FImageJ-green.svg)](https://fiji.sc/) [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.java.com/) [![GitHub release](https://img.shields.io/github/v/release/davidshtengel/fibsem-fiji)](https://github.com/davidshtengel/fibsem-fiji/releases)
+
 # FIB-SEM Toolkit
 
 A Fiji/ImageJ plugin suite for quantitative analysis of Focused Ion Beam - Scanning Electron Microscopy (FIB-SEM) images.
