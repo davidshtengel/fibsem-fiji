@@ -1,7 +1,6 @@
 package com.shtengel.fib_sem.plugins;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -28,6 +27,7 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
 import com.shtengel.fib_sem.core.ContrastAnalyzer;
+import com.shtengel.fib_sem.util.Col;
 import com.shtengel.fib_sem.data.ContrastData;
 import com.shtengel.fib_sem.data.ThresholdData;
 import com.shtengel.fib_sem.util.DoubleGaussianFitter;
@@ -73,6 +73,9 @@ public class Contrast implements Command {
 	private int nbins;
 	private boolean showComponents;
 	private boolean saveFigs;
+	private boolean showGradientPreview;
+	private int iLowWindow;
+	private int iHighWindow;
 	private ImagePlus imp;
 	private ImageProcessor croppedIp;
 	private int cropWidth, cropHeight;
@@ -90,8 +93,8 @@ public class Contrast implements Command {
 	// UI components
 	private JFrame frame;
 	private LinkedSliderField gradientSliderField, iLowSliderField, iHighSliderField;
-	private JCheckBox autoModeCheckbox, showComponentsCheckbox, saveFigsCheckbox;
-	private JTextField i0Field, nbinsField;
+	private JCheckBox autoModeCheckbox, showComponentsCheckbox, saveFigsCheckbox, showGradientCheckbox;
+	private JTextField i0Field, nbinsField, iLowWindowField, iHighWindowField;
 	private JButton applyButton;
 	private Timer updateTimer;
 
@@ -276,19 +279,39 @@ public class Contrast implements Command {
 		gradientSliderField.addChangeCallback(this::schedulePreviewUpdate);
 		panel.add(gradientSliderField);
 
+		showGradientCheckbox = new JCheckBox("Show gradient threshold in preview", showGradientPreview);
+		showGradientCheckbox.addActionListener(e -> schedulePreviewUpdate());
+		panel.add(showGradientCheckbox);
+
 		iLowSliderField = new LinkedSliderField(
 			"I-Low:", minIntensity, maxIntensity, iLow, "%.1f");
 		iLowSliderField.addChangeCallback(this::schedulePreviewUpdate);
 		panel.add(iLowSliderField);
+
+		JPanel iLowWindowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		iLowWindowPanel.add(new JLabel("    Window:"));
+		iLowWindowField = new JTextField(String.valueOf(iLowWindow), 4);
+		iLowWindowField.addActionListener(e -> schedulePreviewUpdate());
+		iLowWindowPanel.add(iLowWindowField);
+		panel.add(iLowWindowPanel);
 
 		iHighSliderField = new LinkedSliderField(
 			"I-High:", minIntensity, maxIntensity, iHigh, "%.1f");
 		iHighSliderField.addChangeCallback(this::schedulePreviewUpdate);
 		panel.add(iHighSliderField);
 
+		JPanel iHighWindowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		iHighWindowPanel.add(new JLabel("    Window:"));
+		iHighWindowField = new JTextField(String.valueOf(iHighWindow), 4);
+		iHighWindowField.addActionListener(e -> schedulePreviewUpdate());
+		iHighWindowPanel.add(iHighWindowField);
+		panel.add(iHighWindowPanel);
+
 		// Set initial enabled state based on auto mode
 		iLowSliderField.setEnabled(!autoMode);
 		iHighSliderField.setEnabled(!autoMode);
+		iLowWindowField.setEnabled(!autoMode);
+		iHighWindowField.setEnabled(!autoMode);
 
 		return panel;
 	}
@@ -344,8 +367,13 @@ public class Contrast implements Command {
 		float gradCutoff = sortedInteriorGradients[cutoffIdx];
 
 		boolean showIntensityOverlay = !autoModeCheckbox.isSelected() || autoFitPopulated;
+		boolean showGradient = showGradientCheckbox.isSelected();
 		float iLowVal = (float) iLowSliderField.getValue();
 		float iHighVal = (float) iHighSliderField.getValue();
+
+		float iLowDelta = 50, iHighDelta = 50;
+		try { iLowDelta = Integer.parseInt(iLowWindowField.getText().trim()); } catch (NumberFormatException ignored) {}
+		try { iHighDelta = Integer.parseInt(iHighWindowField.getText().trim()); } catch (NumberFormatException ignored) {}
 
 		float range = maxIntensity - minIntensity;
 		if (range == 0) range = 1;
@@ -357,12 +385,12 @@ public class Contrast implements Command {
 				float val = cachedSmoothedPixels[idx];
 				int gray = OverlayTint.toGray(val, minIntensity, range);
 
-				if (showIntensityOverlay && val < iLowVal) {
-					previewRgb[idx] = OverlayTint.redTint(gray);
-				} else if (showIntensityOverlay && val > iHighVal) {
-					previewRgb[idx] = OverlayTint.cyanTint(gray);
-				} else if (cachedGradMagnitudes[idx] >= gradCutoff) {
-					previewRgb[idx] = OverlayTint.blueTint(gray);
+				if (showIntensityOverlay && val >= iLowVal - iLowDelta && val <= iLowVal + iLowDelta) {
+					previewRgb[idx] = OverlayTint.tint(gray, Col.THR_MIN);
+				} else if (showIntensityOverlay && val >= iHighVal - iHighDelta && val <= iHighVal + iHighDelta) {
+					previewRgb[idx] = OverlayTint.tint(gray, Col.THR_MAX);
+				} else if (showGradient && cachedGradMagnitudes[idx] >= gradCutoff) {
+					previewRgb[idx] = OverlayTint.tint(gray, Col.GRADIENT);
 				} else {
 					previewRgb[idx] = OverlayTint.grayscale(gray);
 				}
@@ -377,6 +405,8 @@ public class Contrast implements Command {
 		boolean auto = autoModeCheckbox.isSelected();
 		iLowSliderField.setEnabled(!auto);
 		iHighSliderField.setEnabled(!auto);
+		iLowWindowField.setEnabled(!auto);
+		iHighWindowField.setEnabled(!auto);
 		showComponentsCheckbox.setEnabled(auto);
 		schedulePreviewUpdate();
 	}
@@ -420,6 +450,9 @@ public class Contrast implements Command {
 		autoMode = autoModeCheckbox.isSelected();
 		showComponents = showComponentsCheckbox.isSelected();
 		saveFigs = saveFigsCheckbox.isSelected();
+		showGradientPreview = showGradientCheckbox.isSelected();
+		try { iLowWindow = Integer.parseInt(iLowWindowField.getText().trim()); } catch (NumberFormatException ignored) {}
+		try { iHighWindow = Integer.parseInt(iHighWindowField.getText().trim()); } catch (NumberFormatException ignored) {}
 		try {
 			nbins = Integer.parseInt(nbinsField.getText().trim());
 		} catch (NumberFormatException ex) {
@@ -553,7 +586,7 @@ public class Contrast implements Command {
 		StringBuilder legend = new StringBuilder();
 
         // PDF curve
-        plot.setColor(Color.BLUE);
+        plot.setColor(Col.PDF);
 		plot.setLineWidth(1.5f);
         plot.addPoints(binCenters, pdf, Plot.LINE);
         legend.append("PDF\n");
@@ -566,7 +599,7 @@ public class Contrast implements Command {
             for (int i = 0; i < nBins; i++) {
                 fitY[i] = fit.evaluate(binCenters[i]);
             }
-            plot.setColor(Color.MAGENTA);
+            plot.setColor(Col.GAUSS_FIT);
             plot.addPoints(binCenters, fitY, Plot.LINE);
             legend.append(String.format("Double-Gaussian Fit (R\u00B2=%.4f)\n", fit.rSquared()));
 
@@ -582,10 +615,10 @@ public class Contrast implements Command {
                     g1[i] = a1 * Math.exp(-0.5 * dx1 * dx1 / (s1 * s1));
                     g2[i] = a2 * Math.exp(-0.5 * dx2 * dx2 / (s2 * s2));
                 }
-                plot.setColor(Color.RED);
+                plot.setColor(Col.GAUSS_1);
                 plot.addPoints(binCenters, g1, Plot.LINE);
                 legend.append(String.format("Gaussian 1 (\u03BC=%.2f)\n", mu1));
-                plot.setColor(Color.CYAN);
+                plot.setColor(Col.GAUSS_2);
                 plot.addPoints(binCenters, g2, Plot.LINE);
                 legend.append(String.format("Gaussian 2 (\u03BC=%.2f)\n", mu2));
             }
@@ -593,17 +626,17 @@ public class Contrast implements Command {
 
         // Vertical threshold lines
 		plot.setLineWidth(1);
-		plot.setColor(Color.RED);
+		plot.setColor(Col.THR_MIN);
 		plot.drawDottedLine(iLowR, 0, iLowR, maxPdf, 1);
 		plot.addPoints(new double[] {iLowR, iLowR}, new double[] {0, maxPdf}, Plot.DOT);
 		legend.append(String.format("I_low = %.2f\n", iLowR));
-		plot.setColor(Color.CYAN);
+		plot.setColor(Col.THR_MAX);
 		plot.drawDottedLine(iHighR, 0, iHighR, maxPdf, 1);
 		plot.addPoints(new double[] {iHighR, iHighR}, new double[] {0, maxPdf}, Plot.DOT);
 		legend.append(String.format("I_high = %.2f\n", iHighR));
 
 		// Annotations as legend entries (invisible dummy series)
-		plot.setColor(Color.BLACK);
+		plot.setColor(Col.KEY);
 		plot.addPoints(new double[] {Double.NaN}, new double[] {Double.NaN}, Plot.DOT);
 		legend.append(String.format("I0 = %.2f\n", i0));
 		plot.addPoints(new double[] {Double.NaN}, new double[] {Double.NaN}, Plot.DOT);
@@ -645,6 +678,9 @@ public class Contrast implements Command {
 		iHigh = ParamPersister.get(imp, "C_iHigh", 0.0);
 		nbins = ParamPersister.get(imp, "C_nbins", 256);
 		saveFigs = ParamPersister.get(imp, "C_saveFigs", false);
+		showGradientPreview = ParamPersister.get(imp, "C_showGradientPreview", true);
+		iLowWindow = ParamPersister.get(imp, "C_iLowWindow", 50);
+		iHighWindow = ParamPersister.get(imp, "C_iHighWindow", 50);
 	}
 
 	private void setAllPersistedParams(boolean showLog) {
@@ -656,6 +692,9 @@ public class Contrast implements Command {
 		ParamPersister.set(imp, "C_iHigh", iHigh);
 		ParamPersister.set(imp, "C_nbins", nbins);
 		ParamPersister.set(imp, "C_saveFigs", saveFigs);
+		ParamPersister.set(imp, "C_showGradientPreview", showGradientPreview);
+		ParamPersister.set(imp, "C_iLowWindow", iLowWindow);
+		ParamPersister.set(imp, "C_iHighWindow", iHighWindow);
 		if (showLog) {
 			logParams();
 		}

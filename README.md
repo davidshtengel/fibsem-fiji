@@ -104,6 +104,7 @@ src/main/java/com/shtengel/fib_sem/
 │   ├── SaveSnapshot.java
 │   └── Thresholds.java
 └── util/           # Shared utilities
+    ├── Col.java
     ├── DoubleGaussianFitter.java
     ├── EllipseFitter.java
     ├── FigBuilder.java
