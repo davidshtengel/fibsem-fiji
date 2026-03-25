@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 
 import com.shtengel.fib_sem.core.EdgeTransitionAnalyzer;
+import com.shtengel.fib_sem.util.Col;
 import com.shtengel.fib_sem.data.EdgeTransitionData;
 import com.shtengel.fib_sem.util.EllipseFitter;
 import com.shtengel.fib_sem.util.FigBuilder;
@@ -326,7 +327,7 @@ public class EdgeTransitions implements Command {
         		if (x1 >= 0 && x1 <= imgWidth && y1 >= 0 && y1 <= imgHeight
         				&& x2 >= 0 && x2 <= imgWidth && y2 >= 0 && y2 <= imgHeight) {
         			Line line = new Line(x1, y1, x2, y2);
-        			line.setStrokeColor(Color.YELLOW);
+        			line.setStrokeColor(Col.EDGE_STROKE);
         			line.setStrokeWidth(1);
         			overlay.add(line);
         		}
@@ -390,16 +391,16 @@ public class EdgeTransitions implements Command {
         Plot plot = new Plot(plotTitle, "Transition Distance (pixels)", "Count");
         
 		// Add mean line
-        plot.setColor(Color.RED);
+        plot.setColor(Col.MEAN_LINE);
         plot.drawLine(result.getMeanTransition(), 0, result.getMeanTransition(), Arrays.stream(histDouble).max().getAsDouble());
-        
+
         // Add histogram
         plot.setLineWidth(1.5f);
-		plot.setColor(Color.BLUE);
-        plot.addPoints(binCenters, histDouble, Plot.BAR);        
-        
+		plot.setColor(Col.HIST);
+        plot.addPoints(binCenters, histDouble, Plot.BAR);
+
         // Add statistics labels
-        plot.setColor(Color.BLACK);
+        plot.setColor(Col.KEY);
         plot.addLabel(0.025, 0.05, String.format("N = %d", transitions.length));
         plot.addLabel(0.025, 0.075, String.format("Mean = %.3f px", result.getMeanTransition()));
         plot.addLabel(0.025, 0.1, String.format("Std = %.3f px", result.getStdTransition()));
@@ -444,7 +445,7 @@ public class EdgeTransitions implements Command {
 	    Plot plot = new Plot(plotTitle, "Transition X Component (pixels)", "Transition Y Component (pixels)");
 	    plot.setLimits(-maxAbs * 1.1, maxAbs * 1.1, -maxAbs * 1.1, maxAbs * 1.1);
 	    plot.setFrameSize(800,800);
-	    plot.setColor(Color.LIGHT_GRAY);
+	    plot.setColor(Col.AXIS);
 	    plot.drawLine(-maxAbs * 1.1, 0, maxAbs * 1.1, 0);  // X axis
 	    plot.drawLine(0, -maxAbs * 1.1, 0, maxAbs * 1.1);  // Y axis
 	    
@@ -477,7 +478,7 @@ public class EdgeTransitions implements Command {
 	            }
 	            
 	            // Draw fitted ellipse
-	            plot.setColor(Color.MAGENTA);
+	            plot.setColor(Col.GAUSS_FIT);
 	            plot.setLineWidth(2);
 	            plot.addPoints(ellipseX, ellipseY, Plot.LINE);
 	            double ellipticity = EllipseFitter.computeEllipticity(a, b);

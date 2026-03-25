@@ -9,6 +9,8 @@ import com.shtengel.fib_sem.core.ThresholdAnalyzer;
 import com.shtengel.fib_sem.data.ThresholdData;
 import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
+import com.shtengel.fib_sem.util.Col;
+
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -38,19 +40,14 @@ public class Thresholds implements Command {
 	
     @Parameter(type = ItemIO.INPUT, required = false)
     private ImagePlus imp;
-
     @Parameter(label = "Lower CDF Threshold (fraction)", min = "0.0", max = "1.0")
     private double thrMin = 0.001;
-    
     @Parameter(label = "Upper CDF Threshold (fraction)", min = "0.0", max = "1.0")
     private double thrMax = 0.001;
-
     @Parameter(label = "Number of bins", min = "2", max = "65536")
     private int nbins = 256;
-        
     @Parameter(label = "Logarithmic histogram")
     private boolean logHist = false;
-    
     @Parameter(label = "Export as figure")
     private boolean saveFig = false;
     
@@ -170,21 +167,21 @@ public class Thresholds implements Command {
         ); 
                 
         // Add PDF (as bars)
-        plot.setColor("blue"); 
+        plot.setColor(Col.PDF); 
         plot.add("bar", binCenters, pdfToDisplay);
         
         // Add CDF (as line)
-        plot.setColor("magenta");
+        plot.setColor(Col.CDF);
         plot.add("line", binCenters, cdf); 
         
         // Add threshold lines
-        plot.setColor("red");
+        plot.setColor(Col.THR_MIN);
         plot.drawDottedLine(minThr, 0.0, minThr, 1.0, 1);
-        plot.setColor("cyan");
+        plot.setColor(Col.THR_MAX);
         plot.drawDottedLine(maxThr, 0.0, maxThr, 1.0, 1);
         
         // Add legend
-        plot.setColor("black");
+        plot.setColor(Col.KEY);
         plot.addLegend(String.format(
         		"PDF (normalized)\nCDF\nLower threshold = %.3g\nUpper threshold = %.3g",
         	    minThr, maxThr

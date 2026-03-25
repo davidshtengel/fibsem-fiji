@@ -1,19 +1,16 @@
 package com.shtengel.fib_sem.util;
 
+import java.awt.Color;
+
 /**
- * Static utility to tint grayscale pixel values, currently used for exclusion-mask overlays.
+ * Static utility to tint grayscale pixel values, used for exclusion-mask overlays.
  *
- * <p>Each tint method takes a 0–255 grayscale value and returns a packed RGB integer (tint/grayscale blend is 50/50), 
- * to preserve image detail and indicate particular exclusion categories.
+ * <p>The {@link #tint(int, Color)} method takes a 0–255 grayscale value and a tint color,
+ * returning a packed RGB integer that is a 50/50 blend of the tint with the grayscale value.
+ * This preserves image detail while indicating exclusion categories.
  *
- * <p>Color convention (matches both Contrast preview and Noise Statistics mask):
- * <ul>
- *   <li><b>Red</b> — below minimum intensity threshold</li>
- *   <li><b>Cyan</b> — above maximum intensity threshold</li>
- *   <li><b>Blue</b> — excluded by gradient magnitude (determined by gradient threshold)</li>
- *   <li><b>Grayscale</b> — retained / included pixels</li>
- * </ul>
- * </p>
+ * <p>Tint colors for each category are defined in {@link Col} (e.g. {@code Col.THR_MIN},
+ * {@code Col.THR_MAX}, {@code Col.GRADIENT}).
  */
 public class OverlayTint {
 
@@ -44,18 +41,17 @@ public class OverlayTint {
 		return GRAY_LUT[gray];
 	}
 
-	/** Returns a red-tinted packed RGB (below minimum intensity threshold). */
-	public static int redTint(int gray) {
-		return ((gray + 255) / 2 << 16) | (gray / 2 << 8) | gray / 2;
-	}
-
-	/** Returns a cyan-tinted packed RGB (above maximum intensity threshold). */
-	public static int cyanTint(int gray) {
-		return (gray / 2 << 16) | ((gray + 255) / 2 << 8) | (gray + 255) / 2;
-	}
-
-	/** Returns a blue-tinted packed RGB (excluded by high gradient magnitude). */
-	public static int blueTint(int gray) {
-		return (gray / 2 << 16) | (gray / 2 << 8) | (gray + 255) / 2;
+	/**
+	 * Returns a tinted packed RGB: 50/50 blend of the given color with grayscale.
+	 *
+	 * @param gray  grayscale value in [0, 255]
+	 * @param color tint color (typically a {@link Col} constant)
+	 * @return packed RGB integer
+	 */
+	public static int tint(int gray, Color color) {
+		int r = (gray + color.getRed()) / 2;
+		int g = (gray + color.getGreen()) / 2;
+		int b = (gray + color.getBlue()) / 2;
+		return (r << 16) | (g << 8) | b;
 	}
 }

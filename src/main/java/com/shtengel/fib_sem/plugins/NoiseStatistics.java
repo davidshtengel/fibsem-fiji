@@ -1,6 +1,5 @@
 package com.shtengel.fib_sem.plugins;
 
-import java.awt.Color;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 
@@ -10,6 +9,7 @@ import org.scijava.plugin.Plugin;
 import com.shtengel.fib_sem.core.GradientMapAnalyzer;
 import com.shtengel.fib_sem.core.NoiseStatisticsAnalyzer;
 import com.shtengel.fib_sem.data.NoiseStatisticsData;
+import com.shtengel.fib_sem.util.Col;
 import com.shtengel.fib_sem.util.FigBuilder;
 import com.shtengel.fib_sem.util.ImageResolver;
 import com.shtengel.fib_sem.util.OverlayTint;
@@ -75,7 +75,7 @@ public class NoiseStatistics implements Command {
     private boolean showMaskVisualization;
     private boolean saveFigs;
     private ImagePlus imp;
-    
+	
     @Override
     public void run() {
     	// Get active image
@@ -271,11 +271,11 @@ public class NoiseStatistics implements Command {
                 if (isBorder) {
                 	color = OverlayTint.grayscale(gray);
                 } else if (belowMin) {
-                	color = OverlayTint.redTint(gray);
+                	color = OverlayTint.tint(gray, Col.THR_MIN);
                 } else if (aboveMax) {
-                	color = OverlayTint.cyanTint(gray);
+                	color = OverlayTint.tint(gray, Col.THR_MAX);
                 } else if (highGradient) {
-                	color = OverlayTint.blueTint(gray);
+                	color = OverlayTint.tint(gray, Col.GRADIENT);
                 } else {
                 	color = OverlayTint.grayscale(gray);
 				}
@@ -290,8 +290,8 @@ public class NoiseStatistics implements Command {
         
         // Add overlay text explaining colors
         IJ.log("=== Mask Visualization Legend ===");
-        IJ.log("Cyan: Pixels excluded (above intensity threshold)");
-        IJ.log("Red: Pixels excluded (below intensity threshold)");
+        IJ.log("Red: Pixels excluded (above intensity threshold)");
+        IJ.log("Cyan: Pixels excluded (below intensity threshold)");
         IJ.log("Blue: Pixels excluded (high local gradient)");
         IJ.log("Grayscale: Pixels included in analysis");
         IJ.log("Grayscale (border): Pixels excluded (border, not analyzed)");
@@ -404,7 +404,7 @@ public class NoiseStatistics implements Command {
         StringBuilder legend = new StringBuilder();
         
         // Plot data points
-        plot.setColor("BLUE");
+        plot.setColor(Col.DATA);
         plot.addPoints(meanVals, varVals, Plot.CIRCLE);
         legend.append(String.format("Binned Data (Grad. threshold = %.3f)\n", gradientThreshold));
         
@@ -416,9 +416,9 @@ public class NoiseStatistics implements Command {
 
         // Add threshold lines
 		plot.setLineWidth(1);
-        plot.setColor("red");
+        plot.setColor(Col.THR_MIN);
         plot.drawDottedLine(rangeAnalysis[0], limits[2], rangeAnalysis[0], limits[3], 1);
-        plot.setColor("cyan");
+        plot.setColor(Col.THR_MAX);
         plot.drawDottedLine(rangeAnalysis[1], limits[2], rangeAnalysis[1], limits[3], 1);
         
         // Add linear fit line if requested
@@ -430,7 +430,7 @@ public class NoiseStatistics implements Command {
                 slope * fitX[0] + intercept,
                 slope * fitX[1] + intercept
             };
-			plot.setColor(new Color(170, 0, 255));
+			plot.setColor(Col.LINEAR_FIT);
 			plot.addPoints(fitX, fitY, Plot.LINE);
             legend.append(String.format(
                 "Linear fit: SNR = %.3f, I0 = %.3f, R\u00b2 = %.5f\n",
@@ -445,7 +445,7 @@ public class NoiseStatistics implements Command {
                 slopeHeader * (fitX[0] - darkCount),
                 slopeHeader * (fitX[1] - darkCount)
             };
-            plot.setColor(new Color(0, 221, 0));
+            plot.setColor(Col.CONST_FIT);
             plot.addPoints(fitX, fitY, Plot.LINE);
             legend.append(String.format(
                 "Constrained fit: SNR1 = %.3f, I1 = %.3f, R\u00b2 = %.5f\n",
@@ -453,7 +453,7 @@ public class NoiseStatistics implements Command {
             ));
         }
 
-        plot.setColor("BLACK");
+        plot.setColor(Col.KEY);
 		plot.addLegend(legend.toString());
         plot.setLimits(limits);
         plot.setFrameSize(900,600);
