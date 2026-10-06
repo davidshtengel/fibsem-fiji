@@ -585,6 +585,28 @@ public class Contrast implements Command {
 		Plot plot = new Plot("Contrast PDF: " + imageTitle, "Intensity", "Probability Density");
 		StringBuilder legend = new StringBuilder();
 
+		// Intensity (ILow and IHigh) Bands
+		if (!autoMode) {
+			double[] xLowBand = {
+				iLowR - iLowWindow,
+				iLowR + iLowWindow
+			};
+			double[] xHighBand = {
+				iHigh - iHighWindow,
+				iHigh + iHighWindow
+			};
+			double[] yBand = {
+				maxPdf,
+				maxPdf
+			};
+
+			plot.setColor(Col.MIN_BAND);
+			plot.addPoints(xLowBand, yBand, Plot.FILLED);
+			plot.setColor(Col.MAX_BAND);
+			plot.addPoints(xHighBand, yBand, Plot.FILLED);
+			legend.append("\n\n");
+		}
+
         // PDF curve
         plot.setColor(Col.PDF);
 		plot.setLineWidth(1.5f);

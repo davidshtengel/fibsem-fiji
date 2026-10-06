@@ -7,6 +7,8 @@ public class Col {
 	// Threshold markers
 	public static final Color THR_MIN = Color.decode("#00CCCC");
 	public static final Color THR_MAX = Color.decode("#CC0000");
+	public static final Color MIN_BAND = Color.decode("#EEFFFF");
+	public static final Color MAX_BAND = Color.decode("#FFEEEE");
 
 	// Plot curves & data
 	public static final Color DATA = Color.decode("#0000CC");
