@@ -76,6 +76,8 @@ public class Contrast implements Command {
 	private boolean showGradientPreview;
 	private int iLowWindow;
 	private int iHighWindow;
+	private boolean showILowPreview;
+	private boolean showIHighPreview;
 	private ImagePlus imp;
 	private ImageProcessor croppedIp;
 	private int cropWidth, cropHeight;
@@ -93,7 +95,8 @@ public class Contrast implements Command {
 	// UI components
 	private JFrame frame;
 	private LinkedSliderField gradientSliderField, iLowSliderField, iHighSliderField;
-	private JCheckBox autoModeCheckbox, showComponentsCheckbox, saveFigsCheckbox, showGradientCheckbox;
+	private JCheckBox autoModeCheckbox, showComponentsCheckbox, saveFigsCheckbox;
+	private JCheckBox showGradientCheckbox, showILowCheckbox, showIHighCheckbox;
 	private JTextField i0Field, nbinsField, iLowWindowField, iHighWindowField;
 	private JButton applyButton;
 	private Timer updateTimer;
@@ -273,15 +276,19 @@ public class Contrast implements Command {
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 		panel.setBorder(BorderFactory.createTitledBorder("Preview Thresholds"));
-
+		
+		showGradientCheckbox = new JCheckBox("Show gradient threshold in preview", showGradientPreview);
+		showGradientCheckbox.addActionListener(e -> schedulePreviewUpdate());
+		panel.add(showGradientCheckbox);
+		
 		gradientSliderField = new LinkedSliderField(
 			"Gradient threshold:", 0.0, 1.0, gradientThreshold, "%.3f");
 		gradientSliderField.addChangeCallback(this::schedulePreviewUpdate);
 		panel.add(gradientSliderField);
 
-		showGradientCheckbox = new JCheckBox("Show gradient threshold in preview", showGradientPreview);
-		showGradientCheckbox.addActionListener(e -> schedulePreviewUpdate());
-		panel.add(showGradientCheckbox);
+		showILowCheckbox = new JCheckBox("Show I-low threshold in preview", showILowPreview);
+		showILowCheckbox.addActionListener(e -> schedulePreviewUpdate());
+		panel.add(showILowCheckbox);
 
 		iLowSliderField = new LinkedSliderField(
 			"I-Low:", minIntensity, maxIntensity, iLow, "%.1f");
@@ -295,6 +302,10 @@ public class Contrast implements Command {
 		iLowWindowPanel.add(iLowWindowField);
 		panel.add(iLowWindowPanel);
 
+		showIHighCheckbox = new JCheckBox("Show I-high threshold in preview", showIHighPreview);
+		showIHighCheckbox.addActionListener(e -> schedulePreviewUpdate());
+		panel.add(showIHighCheckbox);
+		
 		iHighSliderField = new LinkedSliderField(
 			"I-High:", minIntensity, maxIntensity, iHigh, "%.1f");
 		iHighSliderField.addChangeCallback(this::schedulePreviewUpdate);
@@ -312,6 +323,8 @@ public class Contrast implements Command {
 		iHighSliderField.setEnabled(!autoMode);
 		iLowWindowField.setEnabled(!autoMode);
 		iHighWindowField.setEnabled(!autoMode);
+		showILowCheckbox.setEnabled(!autoMode);
+		showIHighCheckbox.setEnabled(!autoMode);
 
 		return panel;
 	}
@@ -368,6 +381,7 @@ public class Contrast implements Command {
 
 		boolean showIntensityOverlay = !autoModeCheckbox.isSelected() || autoFitPopulated;
 		boolean showGradient = showGradientCheckbox.isSelected();
+
 		float iLowVal = (float) iLowSliderField.getValue();
 		float iHighVal = (float) iHighSliderField.getValue();
 
@@ -385,9 +399,11 @@ public class Contrast implements Command {
 				float val = cachedSmoothedPixels[idx];
 				int gray = OverlayTint.toGray(val, minIntensity, range);
 
-				if (showIntensityOverlay && val >= iLowVal - iLowDelta && val <= iLowVal + iLowDelta) {
+				if (showIntensityOverlay && showILowCheckbox.isSelected()
+						&& val >= iLowVal - iLowDelta && val <= iLowVal + iLowDelta) {
 					previewRgb[idx] = OverlayTint.tint(gray, Col.THR_MIN);
-				} else if (showIntensityOverlay && val >= iHighVal - iHighDelta && val <= iHighVal + iHighDelta) {
+				} else if (showIntensityOverlay && showIHighCheckbox.isSelected()
+						&& val >= iHighVal - iHighDelta && val <= iHighVal + iHighDelta) {
 					previewRgb[idx] = OverlayTint.tint(gray, Col.THR_MAX);
 				} else if (showGradient && cachedGradMagnitudes[idx] >= gradCutoff) {
 					previewRgb[idx] = OverlayTint.tint(gray, Col.GRADIENT);
@@ -407,6 +423,8 @@ public class Contrast implements Command {
 		iHighSliderField.setEnabled(!auto);
 		iLowWindowField.setEnabled(!auto);
 		iHighWindowField.setEnabled(!auto);
+		showILowCheckbox.setEnabled(!auto);
+		showIHighCheckbox.setEnabled(!auto);
 		showComponentsCheckbox.setEnabled(auto);
 		schedulePreviewUpdate();
 	}
@@ -451,6 +469,8 @@ public class Contrast implements Command {
 		showComponents = showComponentsCheckbox.isSelected();
 		saveFigs = saveFigsCheckbox.isSelected();
 		showGradientPreview = showGradientCheckbox.isSelected();
+		showILowPreview = showILowCheckbox.isSelected();
+		showIHighPreview = showIHighCheckbox.isSelected();
 		try { iLowWindow = Integer.parseInt(iLowWindowField.getText().trim()); } catch (NumberFormatException ignored) {}
 		try { iHighWindow = Integer.parseInt(iHighWindowField.getText().trim()); } catch (NumberFormatException ignored) {}
 		try {
@@ -701,6 +721,8 @@ public class Contrast implements Command {
 		nbins = ParamPersister.get(imp, "C_nbins", 256);
 		saveFigs = ParamPersister.get(imp, "C_saveFigs", false);
 		showGradientPreview = ParamPersister.get(imp, "C_showGradientPreview", true);
+		showILowPreview = ParamPersister.get(imp, "C_showILowPreview", true);
+		showIHighPreview = ParamPersister.get(imp, "C_showIHighPreview", true);
 		iLowWindow = ParamPersister.get(imp, "C_iLowWindow", 50);
 		iHighWindow = ParamPersister.get(imp, "C_iHighWindow", 50);
 	}
@@ -715,6 +737,8 @@ public class Contrast implements Command {
 		ParamPersister.set(imp, "C_nbins", nbins);
 		ParamPersister.set(imp, "C_saveFigs", saveFigs);
 		ParamPersister.set(imp, "C_showGradientPreview", showGradientPreview);
+		ParamPersister.set(imp, "C_showILowPreview", showILowPreview);
+		ParamPersister.set(imp, "C_showIHighPreview", showIHighPreview);
 		ParamPersister.set(imp, "C_iLowWindow", iLowWindow);
 		ParamPersister.set(imp, "C_iHighWindow", iHighWindow);
 		if (showLog) {
