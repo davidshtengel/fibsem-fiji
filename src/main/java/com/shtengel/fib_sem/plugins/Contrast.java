@@ -66,6 +66,7 @@ public class Contrast implements Command {
 	
 	private boolean ranSNR;
 	private double i0;
+	private double imageSigma = Double.NaN;
 	private double gradientThreshold;
 	private boolean autoMode;
 	private double iLow;
@@ -683,7 +684,11 @@ public class Contrast implements Command {
 		legend.append(String.format("I0 = %.2f\n", i0));
 		plot.addPoints(new double[] {Double.NaN}, new double[] {Double.NaN}, Plot.DOT);
 		legend.append(String.format("Contrast = %.3f\n", contrast));
-
+		if (Double.isFinite(imageSigma)) {
+			plot.addPoints(new double[] {Double.NaN}, new double[] {Double.NaN}, Plot.DOT);
+			legend.append(String.format("Image sigma = %.2f\n", imageSigma));
+		}
+		
         plot.addLegend(legend.toString());
 		plot.setFrameSize(800,600);
         plot.setLimits(minInt, maxInt, 0, maxPdf * 1.05);
@@ -714,6 +719,7 @@ public class Contrast implements Command {
 	private void getAllPersistedParams() {
 		ranSNR = ParamPersister.get(imp, "C_ranSNR", false);
 		i0 = ParamPersister.get(imp, "C_i0", 0.0);
+		imageSigma = ParamPersister.get(imp, "N_imageSigma", Double.NaN);
         gradientThreshold = ParamPersister.get(imp, "C_gradientThreshold", 0.25);
         autoMode = ParamPersister.get(imp, "C_autoMode", true);
 		iLow  = ParamPersister.get(imp, "C_iLow", 0.0);
