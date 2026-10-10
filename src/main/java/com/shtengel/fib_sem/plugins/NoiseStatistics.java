@@ -337,6 +337,7 @@ public class NoiseStatistics implements Command {
         IJ.log("Slope: " + String.format("%.2f", result.getSlope()));
         IJ.log("R\u00b2: " + String.format("%.5f", result.getR2Linear()));
         IJ.log("SNR <S^2>/<N^2>: " + String.format("%.2f", result.getSNR()));
+		IJ.log("Image Sigma: " + String.format("%.2f", result.getSNR1()));
 		IJ.log("Secondary electron yield: " + String.format("%.3e", estimateSecondaryElectronYield(result.getSNR())));
         IJ.log("");
         IJ.log("--- Fit with Dark Count ---");
@@ -392,6 +393,7 @@ public class NoiseStatistics implements Command {
     	double i0 = result.getI0();
     	double snr = result.getSNR();
     	double snr1 = result.getSNR1();
+		double sigma = result.getSigma();
     	double slopeHeader = result.getSlopeHeader();
     	double r2Linear = result.getR2Linear();
     	double r2Constrained = result.getR2Constrained();
@@ -433,8 +435,8 @@ public class NoiseStatistics implements Command {
 			plot.setColor(Col.LINEAR_FIT);
 			plot.addPoints(fitX, fitY, Plot.LINE);
             legend.append(String.format(
-                "Linear fit: SNR = %.3f, I0 = %.3f, R\u00b2 = %.5f\n",
-                snr, i0, r2Linear
+                "Linear fit: SNR = %.3f, I0 = %.3f, R\u00b2 = %.5f, \u03c3 = %.2f\n",
+                snr, i0, r2Linear, sigma
             ));            
         }
         

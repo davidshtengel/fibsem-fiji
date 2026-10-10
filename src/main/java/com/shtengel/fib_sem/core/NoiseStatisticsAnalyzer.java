@@ -205,13 +205,15 @@ public class NoiseStatisticsAnalyzer {
         // Compute SNR values
         double snr = computeSNR(smoothedFilt, diffFilt, i0);
         double snr1 = computeSNR(smoothedFilt, diffFilt, darkCount);
-
+		double sigma = computeImageSigma(diffFilt);
+		
         return new NoiseStatisticsData(
             meanArray,
             varArray,
             i0,
             snr,
             snr1,
+			sigma,
             slope,
             slopeHeader,
             iPeak,
@@ -504,6 +506,16 @@ public class NoiseStatisticsAnalyzer {
            
         return sumNoiseSq > 0 ? (sumSigSq / signal.length) / (sumNoiseSq / noise.length) : 0;
     }
+
+	private static double computeImageSigma(float[] noise) {
+		double sumNoiseSq = 0;
+        
+        for (int i = 0; i < noise.length; i++) {
+            sumNoiseSq += noise[i] * noise[i];
+        }
+           
+        return Math.sqrt(sumNoiseSq / noise.length);
+	}
     
     /**
      * Helper to convert ArrayList<Float> to float[]

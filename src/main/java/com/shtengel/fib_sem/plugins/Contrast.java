@@ -659,10 +659,10 @@ public class Contrast implements Command {
                 }
                 plot.setColor(Col.GAUSS_1);
                 plot.addPoints(binCenters, g1, Plot.LINE);
-                legend.append(String.format("Gaussian 1 (\u03BC=%.2f)\n", mu1));
+                legend.append(String.format("Gaussian 1 (\u03BC=%.2f, \u03c3=%.2f)\n", mu1, s1));
                 plot.setColor(Col.GAUSS_2);
                 plot.addPoints(binCenters, g2, Plot.LINE);
-                legend.append(String.format("Gaussian 2 (\u03BC=%.2f)\n", mu2));
+                legend.append(String.format("Gaussian 2 (\u03BC=%.2f, \u03c3=%.2f)\n", mu2, s2));
             }
         }
 
@@ -671,11 +671,11 @@ public class Contrast implements Command {
 		plot.setColor(Col.THR_MIN);
 		plot.drawDottedLine(iLowR, 0, iLowR, maxPdf, 1);
 		plot.addPoints(new double[] {iLowR, iLowR}, new double[] {0, maxPdf}, Plot.DOT);
-		legend.append(String.format("I_low = %.2f\n", iLowR));
+		legend.append("\n");
 		plot.setColor(Col.THR_MAX);
 		plot.drawDottedLine(iHighR, 0, iHighR, maxPdf, 1);
 		plot.addPoints(new double[] {iHighR, iHighR}, new double[] {0, maxPdf}, Plot.DOT);
-		legend.append(String.format("I_high = %.2f\n", iHighR));
+		legend.append("\n");
 
 		// Annotations as legend entries (invisible dummy series)
 		plot.setColor(Col.KEY);

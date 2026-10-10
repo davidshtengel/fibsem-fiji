@@ -29,6 +29,9 @@ public class NoiseStatisticsData {
     /** Signal-to-noise ratio using fixed dark-count offset. */
     private final double snr1;
 
+	/**	 */
+	private final double sigma;
+
     /** Slope of variance–mean relationship from linear fit. */
     private final double slope;
 
@@ -58,6 +61,7 @@ public class NoiseStatisticsData {
 							double i0,
 							double snr,
 							double snr1,
+							double sigma,
 							double slope,
 							double slopeHeader,
 							double iPeak,
@@ -71,6 +75,7 @@ public class NoiseStatisticsData {
         this.i0 = i0;
         this.snr = snr;
         this.snr1 = snr1;
+		this.sigma = sigma;
         this.slope = slope;
         this.slopeHeader = slopeHeader;
         this.iPeak = iPeak;
@@ -86,6 +91,7 @@ public class NoiseStatisticsData {
     public double getI0() { return i0; }
     public double getSNR() { return snr; }
     public double getSNR1() { return snr1; }
+	public double getSigma() { return sigma; }
     public double getSlope() { return slope; }
     public double getSlopeHeader() { return slopeHeader; }
     public double getIPeak() { return iPeak; }
