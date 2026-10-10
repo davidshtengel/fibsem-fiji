@@ -720,7 +720,7 @@ public class Contrast implements Command {
 		iHigh = ParamPersister.get(imp, "C_iHigh", 0.0);
 		nbins = ParamPersister.get(imp, "C_nbins", 256);
 		saveFigs = ParamPersister.get(imp, "C_saveFigs", false);
-		showGradientPreview = ParamPersister.get(imp, "C_showGradientPreview", true);
+		showGradientPreview = ParamPersister.get(imp, "C_showGradientPreview", false);
 		showILowPreview = ParamPersister.get(imp, "C_showILowPreview", true);
 		showIHighPreview = ParamPersister.get(imp, "C_showIHighPreview", true);
 		iLowWindow = ParamPersister.get(imp, "C_iLowWindow", 50);
