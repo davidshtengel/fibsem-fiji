@@ -401,10 +401,10 @@ public class Contrast implements Command {
 				int gray = OverlayTint.toGray(val, minIntensity, range);
 
 				if (showIntensityOverlay && showILowCheckbox.isSelected()
-						&& val >= iLowVal - iLowDelta && val <= iLowVal + iLowDelta) {
+						&& val >= iLowVal - (iLowDelta / 2) && val <= iLowVal + (iLowDelta / 2)) {
 					previewRgb[idx] = OverlayTint.tint(gray, Col.THR_MIN);
 				} else if (showIntensityOverlay && showIHighCheckbox.isSelected()
-						&& val >= iHighVal - iHighDelta && val <= iHighVal + iHighDelta) {
+						&& val >= iHighVal - (iHighDelta / 2) && val <= iHighVal + (iHighDelta / 2)) {
 					previewRgb[idx] = OverlayTint.tint(gray, Col.THR_MAX);
 				} else if (showGradient && cachedGradMagnitudes[idx] >= gradCutoff) {
 					previewRgb[idx] = OverlayTint.tint(gray, Col.GRADIENT);
@@ -497,6 +497,10 @@ public class Contrast implements Command {
 		}
 		if (!autoMode && iLow >= iHigh) {
 			IJ.error("Contrast", "I-Low must be less than I-High.");
+			return;
+		}
+		if (iLowWindow < 0 || iHighWindow < 0) {
+			IJ.error("Contrast", "Window values must be non-negative.");
 			return;
 		}
 		if (nbins < 10 || nbins > 10000) {
@@ -609,12 +613,12 @@ public class Contrast implements Command {
 		// Intensity (ILow and IHigh) Bands
 		if (!autoMode) {
 			double[] xLowBand = {
-				iLowR - iLowWindow,
-				iLowR + iLowWindow
+				iLowR - (iLowWindow / 2.0),
+				iLowR + (iLowWindow / 2.0)
 			};
 			double[] xHighBand = {
-				iHigh - iHighWindow,
-				iHigh + iHighWindow
+				iHigh - (iHighWindow / 2.0),
+				iHigh + (iHighWindow / 2.0)
 			};
 			double[] yBand = {
 				maxPdf,
