@@ -14,6 +14,8 @@ import ij.process.*;
  */
 public class ContrastAnalyzer {
 
+	private static final double FWHM_TO_SIGMA = 2.0 * Math.sqrt(2.0 * Math.log(2.0));
+
 	private ContrastAnalyzer() {}
 
 	/**
@@ -93,16 +95,42 @@ public class ContrastAnalyzer {
 		double gradientThreshold,
 		double iLow,
 		double iHigh,
+		int iLowWindow,
+		int iHighWindow,
 		int nbins) {
 
 		double[][] subset = extractSubset(ip, gradientThreshold);
 		double[] values = subset[0];
 		int totalPixels = (int) subset[1][0];
 		int subsetPixels = (int) subset[2][0];
+		double sigmaLow = iLowWindow / FWHM_TO_SIGMA;
+		double sigmaHigh = iHighWindow / FWHM_TO_SIGMA;
+
+		if (iLowWindow <= 0 || iHighWindow <= 0) {
+			throw new IllegalArgumentException("Manual Gaussian FWHM values must be positive");
+		}
 
 		ThresholdData thresholds = ThresholdAnalyzer.computeThresholds(
 			values, 0.001, 0.001, nbins
 		);
+
+		// Reconstruct bin centres using the same range and binning as the PDF.
+		double[] pdf = thresholds.getPDF();
+		int nBins = pdf.length;
+		double minInt = thresholds.getMinIntensity();
+		double maxInt = thresholds.getMaxIntensity();
+		double binWidth = (maxInt - minInt) / nBins;
+		double[] binCenters = new double[nBins];
+		for (int i = 0; i < nBins; i++) {
+			binCenters[i] = minInt + (i + 0.5) * binWidth;
+		}
+
+		// User supplies component means and FWHM; fit only non-negative amplitudes.
+		DoubleGaussianFitter.FitResult fit =
+			DoubleGaussianFitter.fitWithFixedMeansAndSigmas(
+				binCenters, pdf,
+				iLow, sigmaLow,
+				iHigh, sigmaHigh);
 
 		return new ContrastData(iLow, iHigh, darkCount,
 			gradientThreshold,
@@ -111,7 +139,7 @@ public class ContrastAnalyzer {
 			false,  // manual mode
 			nbins,
 			thresholds,
-			null    // no fit in manual mode
+			fit
 		);
 	}
 

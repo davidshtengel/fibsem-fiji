@@ -297,7 +297,7 @@ public class Contrast implements Command {
 		panel.add(iLowSliderField);
 
 		JPanel iLowWindowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-		iLowWindowPanel.add(new JLabel("    Window:"));
+		iLowWindowPanel.add(new JLabel("    FWHM:"));
 		iLowWindowField = new JTextField(String.valueOf(iLowWindow), 4);
 		iLowWindowField.addActionListener(e -> schedulePreviewUpdate());
 		iLowWindowPanel.add(iLowWindowField);
@@ -313,7 +313,7 @@ public class Contrast implements Command {
 		panel.add(iHighSliderField);
 
 		JPanel iHighWindowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-		iHighWindowPanel.add(new JLabel("    Window:"));
+		iHighWindowPanel.add(new JLabel("    FWHM:"));
 		iHighWindowField = new JTextField(String.valueOf(iHighWindow), 4);
 		iHighWindowField.addActionListener(e -> schedulePreviewUpdate());
 		iHighWindowPanel.add(iHighWindowField);
@@ -345,7 +345,7 @@ public class Contrast implements Command {
 
 		gbc.gridy = 1;
 		showComponentsCheckbox = new JCheckBox("Show individual Gaussian components on plot", showComponents);
-		showComponentsCheckbox.setEnabled(autoMode);
+		showComponentsCheckbox.setEnabled(true);
 		panel.add(showComponentsCheckbox, gbc);
 
 		gbc.gridy = 2; gbc.gridwidth = 1;
@@ -426,7 +426,7 @@ public class Contrast implements Command {
 		iHighWindowField.setEnabled(!auto);
 		showILowCheckbox.setEnabled(!auto);
 		showIHighCheckbox.setEnabled(!auto);
-		showComponentsCheckbox.setEnabled(auto);
+		showComponentsCheckbox.setEnabled(true);
 		schedulePreviewUpdate();
 	}
 
@@ -499,8 +499,8 @@ public class Contrast implements Command {
 			IJ.error("Contrast", "I-Low must be less than I-High.");
 			return;
 		}
-		if (iLowWindow < 0 || iHighWindow < 0) {
-			IJ.error("Contrast", "Window values must be non-negative.");
+		if (!autoMode && (iLowWindow <= 0 || iHighWindow <= 0)) {
+			IJ.error("Contrast", "Manual Gaussian FWHM values must be positive.");
 			return;
 		}
 		if (nbins < 10 || nbins > 10000) {
@@ -517,7 +517,7 @@ public class Contrast implements Command {
 				if (autoMode) {
 					return ContrastAnalyzer.computeContrastAuto(croppedIp, i0, gradientThreshold, nbins);
 				} else {
-					return ContrastAnalyzer.computeContrastManual(croppedIp, i0, gradientThreshold, iLow, iHigh, nbins);
+					return ContrastAnalyzer.computeContrastManual(croppedIp, i0, gradientThreshold, iLow, iHigh, iLowWindow, iHighWindow, nbins);
 				}
 			}
 
@@ -638,21 +638,24 @@ public class Contrast implements Command {
         plot.addPoints(binCenters, pdf, Plot.LINE);
         legend.append("PDF\n");
 
-        // Fitted double-gaussian curve (auto mode only)
-        if (result.isAutoMode() && result.getGaussianFit() != null) {
+        // Double-Gaussian model: nonlinear fit in auto mode; fixed means/sigmas
+        // with fitted non-negative amplitudes in manual mode.
+        if (result.getGaussianFit() != null) {
 			plot.setLineWidth(0.75f);
             DoubleGaussianFitter.FitResult fit = result.getGaussianFit();
             double[] fitY = new double[nBins];
             for (int i = 0; i < nBins; i++) {
                 fitY[i] = fit.evaluate(binCenters[i]);
             }
-            plot.setColor(Col.GAUSS_FIT);
-            plot.addPoints(binCenters, fitY, Plot.LINE);
-            legend.append(String.format("Double-Gaussian Fit (R\u00B2=%.4f)\n", fit.rSquared()));
-
-            // Individual Gaussian components
+			
             if (showComponents) {
-                double a1 = fit.getA1(), mu1 = fit.getMu1(), s1 = fit.getSigma1();
+				plot.setColor(Col.GAUSS_FIT);
+				plot.addPoints(binCenters, fitY, Plot.LINE);
+				legend.append(String.format("%s (R\u00B2=%.4f)\n",
+					result.isAutoMode() ? "Double-Gaussian Fit" : "Manual-width Gaussian Model",
+					fit.rSquared()));
+                
+				double a1 = fit.getA1(), mu1 = fit.getMu1(), s1 = fit.getSigma1();
                 double a2 = fit.getA2(), mu2 = fit.getMu2(), s2 = fit.getSigma2();
                 double[] g1 = new double[nBins];
                 double[] g2 = new double[nBins];
@@ -662,12 +665,14 @@ public class Contrast implements Command {
                     g1[i] = a1 * Math.exp(-0.5 * dx1 * dx1 / (s1 * s1));
                     g2[i] = a2 * Math.exp(-0.5 * dx2 * dx2 / (s2 * s2));
                 }
+                double fwhm1 = 2.0 * Math.sqrt(2.0 * Math.log(2.0)) * s1;
+                double fwhm2 = 2.0 * Math.sqrt(2.0 * Math.log(2.0)) * s2;
                 plot.setColor(Col.GAUSS_1);
                 plot.addPoints(binCenters, g1, Plot.LINE);
-                legend.append(String.format("Gaussian 1 (\u03BC=%.2f, \u03c3=%.2f)\n", mu1, s1));
+                legend.append(String.format("Gaussian 1 (\u03BC=%.2f, \u03c3=%.2f, FWHM=%.2f)\n", mu1, s1, fwhm1));
                 plot.setColor(Col.GAUSS_2);
                 plot.addPoints(binCenters, g2, Plot.LINE);
-                legend.append(String.format("Gaussian 2 (\u03BC=%.2f, \u03c3=%.2f)\n", mu2, s2));
+                legend.append(String.format("Gaussian 2 (\u03BC=%.2f, \u03c3=%.2f, FWHM=%.2f)\n", mu2, s2, fwhm2));
             }
         }
 

@@ -125,6 +125,109 @@ public class DoubleGaussianFitter {
     }
 
     /**
+     * Fits a double-Gaussian model while keeping both means fixed. The supplied
+     * sigmas are initial guesses only; both sigmas and amplitudes are optimized.
+     * The returned parameter order matches {@link FitResult}.
+     */
+    public static FitResult fitWithFixedMeansAndSigmas(
+            double[] x, double[] y,
+            double mu1, double sigma1, double mu2, double sigma2) {
+        if (x == null || y == null || x.length != y.length || x.length < 3) {
+            throw new IllegalArgumentException("x and y must have the same length (at least 3)");
+        }
+        if (!(sigma1 > 0.0) || !(sigma2 > 0.0)
+                || !Double.isFinite(sigma1) || !Double.isFinite(sigma2)) {
+            throw new IllegalArgumentException("Initial Gaussian sigmas must be finite and positive");
+        }
+        if (mu1 > mu2) {
+            double t = mu1; mu1 = mu2; mu2 = t;
+            t = sigma1; sigma1 = sigma2; sigma2 = t;
+        }
+
+        // Estimate initial amplitudes by linear least squares at given means and initial sigmas.
+        double c11 = 0.0, c22 = 0.0, c12 = 0.0;
+        double b1 = 0.0, b2 = 0.0;
+        double[] g1 = new double[x.length];
+        double[] g2 = new double[x.length];
+        for (int i = 0; i < x.length; i++) {
+            double d1 = (x[i] - mu1) / sigma1;
+            double d2 = (x[i] - mu2) / sigma2;
+            g1[i] = Math.exp(-0.5 * d1 * d1);
+            g2[i] = Math.exp(-0.5 * d2 * d2);
+            c11 += g1[i] * g1[i];
+            c22 += g2[i] * g2[i];
+            c12 += g1[i] * g2[i];
+            b1 += g1[i] * y[i];
+            b2 += g2[i] * y[i];
+        }
+        double det = c11 * c22 - c12 * c12;
+        double a1 = 0.0, a2 = 0.0;
+        if (det > 1e-30) {
+            a1 = Math.max(0.0, (b1 * c22 - b2 * c12) / det);
+            a2 = Math.max(0.0, (b2 * c11 - b1 * c12) / det);
+        } else {
+            a1 = c11 > 0.0 ? Math.max(0.0, b1 / c11) : 0.0;
+            a2 = c22 > 0.0 ? Math.max(0.0, b2 / c22) : 0.0;
+        }
+        // Keep positive start so sigma derivatives are available when
+		// initial linear estimate assigns a component zero amplitude.
+        double maxY = 0.0;
+        for (double v : y) maxY = Math.max(maxY, Math.abs(v));
+        double amplitudeFloor = Math.max(1e-12, maxY * 1e-9);
+
+        // Optimize [log(A1), log(sigma1), log(A2), log(sigma2)]. 
+		// The log parameterization keeps both amplitudes and sigmas positive.
+        final double fixedMu1 = mu1;
+        final double fixedMu2 = mu2;
+        MultivariateJacobianFunction model = point -> {
+            double[] p = point.toArray();
+            double amp1 = Math.exp(p[0]);
+            double sig1 = Math.exp(p[1]);
+            double amp2 = Math.exp(p[2]);
+            double sig2 = Math.exp(p[3]);
+            double[] values = new double[x.length];
+            double[][] jacobian = new double[x.length][4];
+            for (int i = 0; i < x.length; i++) {
+                double d1 = (x[i] - fixedMu1) / sig1;
+                double d2 = (x[i] - fixedMu2) / sig2;
+                double e1 = Math.exp(-0.5 * d1 * d1);
+                double e2 = Math.exp(-0.5 * d2 * d2);
+                values[i] = amp1 * e1 + amp2 * e2;
+                jacobian[i][0] = amp1 * e1;
+                jacobian[i][1] = amp1 * e1 * d1 * d1;
+                jacobian[i][2] = amp2 * e2;
+                jacobian[i][3] = amp2 * e2 * d2 * d2;
+            }
+            return new Pair<>(new ArrayRealVector(values), new Array2DRowRealMatrix(jacobian));
+        };
+
+        LeastSquaresProblem problem = new LeastSquaresBuilder()
+            .start(new double[] {
+                Math.log(Math.max(amplitudeFloor, a1)), Math.log(sigma1),
+                Math.log(Math.max(amplitudeFloor, a2)), Math.log(sigma2)
+            })
+            .model(model)
+            .target(y)
+            .maxEvaluations(MAX_EVALUATIONS)
+            .maxIterations(MAX_ITERATIONS)
+            .lazyEvaluation(false)
+            .build();
+
+        LeastSquaresOptimizer.Optimum optimum =
+            new LevenbergMarquardtOptimizer().optimize(problem);
+        double[] fitted = optimum.getPoint().toArray();
+        double[] params = {
+            Math.exp(fitted[0]), fixedMu1, Math.exp(fitted[1]),
+            Math.exp(fitted[2]), fixedMu2, Math.exp(fitted[3])
+        };
+        double r2 = computeRSquared(x, y, params);
+        IJ.log(String.format(
+            "Fixed-mean double-Gaussian fit: μ1=%.2f σ1=%.2f A1=%.4f | μ2=%.2f σ2=%.2f A2=%.4f | R²=%.5f",
+            params[1], params[2], params[0], params[4], params[5], params[3], r2));
+        return new FitResult(params, r2);
+    }
+
+    /**
      * 6-parameter double-Gaussian fit using Commons Math LevenbergMarquardtOptimizer.
      */
     private static double[] fitDoubleGaussianLM(double[] x, double[] y, double[] start) {
