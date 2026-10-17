@@ -136,12 +136,29 @@ public class DatFileProcessor {
 		detA = header.getDetA();
 		detB = header.getDetB();
     	
-		ImageStack stack;
-    	if (channelCount > 1) {
-    		stack = createMultiChannelStack(fileData.getImageData(), width, height, bitDepth, ai1, ai2, detA, detB);
-    	} else { 
-    		stack = createImageStack(fileData.getImageData(), width, height, depth, bitDepth); 
-    	}
+        byte[] imageData = fileData.getImageData();
+        ImageStack stack;
+
+        // Detect oversampling from the actual payload length. The expected ordinary
+        // payload contains one value per pixel per active detector. If the payload is
+        // an exact multiple of that size, the multiplier is the number of samples.
+        String[] channelNames = getActiveChannelNames(ai1, ai2, detA, detB);
+        int activeChannels = Math.max(1, channelNames.length);
+        long bytesPerFrame = (long) width * height * activeChannels * (bitDepth / 8);
+        long oversampleCountLong = bytesPerFrame > 0 ? imageData.length / bytesPerFrame : 0;
+        boolean exactMultiple = bytesPerFrame > 0 && imageData.length % bytesPerFrame == 0;
+
+        if (exactMultiple && oversampleCountLong > 1 && oversampleCountLong <= Integer.MAX_VALUE) {
+            int oversampleCount = (int) oversampleCountLong;
+            logService.info("Detected oversampled .dat payload: " + oversampleCount
+                    + " samples per pixel, " + activeChannels + " active detector(s)");
+            stack = createOversampledStack(imageData, width, height, bitDepth,
+                    channelNames, oversampleCount, activeChannels);
+        } else if (channelCount > 1) {
+            stack = createMultiChannelStack(imageData, width, height, bitDepth, ai1, ai2, detA, detB);
+        } else {
+            stack = createImageStack(imageData, width, height, depth, bitDepth);
+        }
     		    	
     	ImagePlus imp = new ImagePlus(fileData.getFileName(), stack);
     	return imp;
@@ -169,6 +186,52 @@ public class DatFileProcessor {
      * @return an ImageStack containing one slice per active channel with appropriate labels
      * @throws IllegalArgumentException if bitDepth is not 8, 16, or 32
      */
+    /**
+     * Reconstructs oversampled pixel arrays into one stack slice per sample index.
+     * Assumed payload order: pixel, oversample index, channel, then sample bytes.
+     */
+    private ImageStack createOversampledStack(byte[] data, int width, int height, int bitDepth,
+            String[] channelNames, int oversampleCount, int activeChannels) {
+        ImageStack stack = new ImageStack(width, height);
+        int pixelCount = Math.multiplyExact(width, height);
+        int bytesPerSample = bitDepth / 8;
+        int sampleStride = Math.multiplyExact(activeChannels, bytesPerSample);
+        ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN);
+
+        for (int channel = 0; channel < activeChannels; channel++) {
+            String channelName = channel < channelNames.length ? channelNames[channel] : "Channel " + (channel + 1);
+            for (int sample = 0; sample < oversampleCount; sample++) {
+                ImageProcessor ip;
+                if (bitDepth == 8) {
+                    byte[] pixels = new byte[pixelCount];
+                    for (int p = 0; p < pixelCount; p++) {
+                        int offset = (p * oversampleCount + sample) * sampleStride + channel * bytesPerSample;
+                        pixels[p] = data[offset];
+                    }
+                    ip = new ByteProcessor(width, height, pixels, null);
+                } else if (bitDepth == 16) {
+                    float[] pixels = new float[pixelCount];
+                    for (int p = 0; p < pixelCount; p++) {
+                        int offset = (p * oversampleCount + sample) * sampleStride + channel * bytesPerSample;
+                        pixels[p] = buffer.getShort(offset);
+                    }
+                    ip = new FloatProcessor(width, height, pixels);
+                } else if (bitDepth == 32) {
+                    float[] pixels = new float[pixelCount];
+                    for (int p = 0; p < pixelCount; p++) {
+                        int offset = (p * oversampleCount + sample) * sampleStride + channel * bytesPerSample;
+                        pixels[p] = buffer.getFloat(offset);
+                    }
+                    ip = new FloatProcessor(width, height, pixels);
+                } else {
+                    throw new IllegalArgumentException("Unsupported bit depth: " + bitDepth);
+                }
+                stack.addSlice(channelName + " | Oversample " + (sample + 1), ip);
+            }
+        }
+        return stack;
+    }
+
     private ImageStack createMultiChannelStack(byte[] data, int width, int height, int bitDepth, boolean ai1, boolean ai2, String detA, String detB) {
 	    ImageStack stack = new ImageStack(width, height);
 	    	

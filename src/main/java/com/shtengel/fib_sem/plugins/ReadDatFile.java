@@ -2,6 +2,7 @@ package com.shtengel.fib_sem.plugins;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.io.FileInfo;
 import ij.measure.Calibration;
 import ij.process.ImageProcessor;
@@ -102,8 +103,14 @@ public class ReadDatFile implements Command {
 		
 		ImagePlus imp = processor.processImageData(fileData);
 		
-		// Multi-channel data: open one window per channel
-		if (imp.getStackSize() > 1) {
+        // Oversampled data is encoded as one slice per (channel, sample index).
+        // Keep all sample slices for a detector in one ImageJ stack/window.
+        if (imp.getStackSize() > 1
+                && imp.getStack().getSliceLabel(1) != null
+                && imp.getStack().getSliceLabel(1).contains("| Oversample ")) {
+            displayOversampledStacks(imp, inputFile, header);
+        // Standard multi-channel data: retain the existing one-window-per-channel behavior.
+        } else if (imp.getStackSize() > 1) {
 		
 			for (int i = 1; i <= imp.getStackSize(); i++) {
 				ImageProcessor ip = imp.getStack().getProcessor(i);
@@ -142,6 +149,50 @@ public class ReadDatFile implements Command {
 		logService.info("Successfully processed .dat file");
 	}
 	
+    private void displayOversampledStacks(ImagePlus source, File inputFile, HeaderData header) {
+        java.util.Map<String, ImageStack> stacks = new java.util.LinkedHashMap<>();
+        for (int i = 1; i <= source.getStackSize(); i++) {
+            String label = source.getStack().getSliceLabel(i);
+            int separator = label == null ? -1 : label.indexOf(" | Oversample ");
+            String channel = separator >= 0 ? label.substring(0, separator) : "Channel";
+            String sliceLabel = separator >= 0 ? label.substring(separator + 3) : "Oversample " + i;
+            ImageStack channelStack = stacks.get(channel);
+            if (channelStack == null) {
+                channelStack = new ImageStack(source.getWidth(), source.getHeight());
+                stacks.put(channel, channelStack);
+            }
+            channelStack.addSlice(sliceLabel, source.getStack().getProcessor(i).duplicate());
+        }
+
+        boolean first = true;
+        for (java.util.Map.Entry<String, ImageStack> entry : stacks.entrySet()) {
+            String channel = entry.getKey();
+            ImagePlus channelImage = new ImagePlus(
+                    getBaseName(inputFile) + "_" + getSafeFileString(channel), entry.getValue());
+
+            // Use one display range for the stack, based on all pixels in all slices.
+            double min = Double.POSITIVE_INFINITY;
+            double max = Double.NEGATIVE_INFINITY;
+            for (int i = 1; i <= channelImage.getStackSize(); i++) {
+                ImageProcessor ip = channelImage.getStack().getProcessor(i);
+                ip.resetMinAndMax();
+                min = Math.min(min, ip.getMin());
+                max = Math.max(max, ip.getMax());
+            }
+            if (Double.isFinite(min) && Double.isFinite(max)) {
+                IJ.setMinAndMax(channelImage, min, max);
+            }
+            setCalibration(channelImage, header);
+            addHeaderInfo(channelImage, header, channel + " (oversampled stack)");
+            setFileInfo(channelImage, inputFile);
+            channelImage.show();
+            if (first) {
+                outputImage = channelImage;
+                first = false;
+            }
+        }
+    }
+
 	/**
      * Applies spatial and temporal calibration from the .dat header.
      *
